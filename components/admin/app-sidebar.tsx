@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   Package,
@@ -8,6 +9,7 @@ import {
   Users,
   Settings,
   BarChart3,
+  LogOut,
 } from "lucide-react"
 
 import {
@@ -22,6 +24,8 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import { signOut, useSession } from "@/lib/auth-client"
 
 // Menu items with icons
 const menuItems = [
@@ -58,6 +62,15 @@ const menuItems = [
 ]
 
 export function AppSidebar() {
+  const router = useRouter()
+  const { data: session } = useSession()
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/signin")
+    router.refresh()
+  }
+
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-6 py-4">
@@ -82,7 +95,20 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="border-t p-4 space-y-2">
+        <div className="text-xs text-muted-foreground">
+          <p className="font-medium truncate">{session?.user?.name}</p>
+          <p className="truncate">{session?.user?.email}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start text-red-600 hover:text-red-700"
+          onClick={handleSignOut}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
         <p className="text-xs text-muted-foreground">v1.0.0</p>
       </SidebarFooter>
     </Sidebar>

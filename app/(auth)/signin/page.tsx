@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +21,27 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const response = await fetch("/api/auth/check-admin");
+        const data = await response.json();
+
+        if (!data.adminExists) {
+          // No admin exists, redirect to signup
+          router.push("/signup");
+        }
+      } catch (err) {
+        setError("Failed to check admin status");
+      } finally {
+        setIsCheckingAdmin(false);
+      }
+    };
+
+    checkAdmin();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,17 +56,31 @@ export default function SignInPage() {
 
       if (result.error) {
         setError(result.error.message || "Failed to sign in");
+        setIsLoading(false);
         return;
       }
 
-      router.push("/");
-      router.refresh();
+      // Use window.location for a clean redirect after sign-in
+      window.location.href = "/admin";
     } catch (err) {
       setError("An unexpected error occurred");
-    } finally {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              Checking system status...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
@@ -89,19 +123,10 @@ export default function SignInPage() {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+          <CardFooter>
+            <Button type="submit" className="w-full mt-4" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/signup"
-                className="font-medium text-primary hover:underline"
-              >
-                Sign up
-              </Link>
-            </p>
           </CardFooter>
         </form>
       </Card>

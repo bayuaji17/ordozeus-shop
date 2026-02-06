@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/admin/app-sidebar"
+import { AdminHeader } from "@/components/admin/admin-header"
 
 export default function AdminLayout({
   children,
@@ -10,11 +11,7 @@ export default function AdminLayout({
     <SidebarProvider>
       <AppSidebar />
       <main className="w-full">
-        <div className="border-b">
-          <div className="flex h-16 items-center px-4">
-            <SidebarTrigger />
-          </div>
-        </div>
+        <AdminHeader />
         <div className="flex-1 space-y-4 p-8 pt-6">
           {children}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
@@ -24,6 +24,30 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
+  const [isFirstAdmin, setIsFirstAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const response = await fetch("/api/auth/check-admin");
+        const data = await response.json();
+
+        if (data.adminExists) {
+          // Admin exists, redirect to signin
+          router.push("/signin");
+        } else {
+          setIsFirstAdmin(true);
+        }
+      } catch (err) {
+        setError("Failed to check admin status");
+      } finally {
+        setIsCheckingAdmin(false);
+      }
+    };
+
+    checkAdmin();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +66,16 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
+      // Check if this will be the first user
+      const checkResponse = await fetch("/api/auth/signup-custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const { isFirstUser } = await checkResponse.json();
+
+      // Create user with Better Auth
       const result = await signUp.email({
         email,
         password,
@@ -53,7 +87,16 @@ export default function SignUpPage() {
         return;
       }
 
-      router.push("/");
+      // If this is the first user, assign admin role
+      if (isFirstUser) {
+        await fetch("/api/auth/signup-custom", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+      }
+
+      router.push("/admin");
       router.refresh();
     } catch (err) {
       setError("An unexpected error occurred");
@@ -62,13 +105,31 @@ export default function SignUpPage() {
     }
   };
 
+  if (isCheckingAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              Checking system status...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Create Account</CardTitle>
+          <CardTitle>
+            {isFirstAdmin ? "Create Admin Account" : "Create Account"}
+          </CardTitle>
           <CardDescription>
-            Enter your information to create your account
+            {isFirstAdmin
+              ? "Set up your first admin account to get started"
+              : "Enter your information to create your account"}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

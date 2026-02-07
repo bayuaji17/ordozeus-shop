@@ -108,3 +108,12 @@ export function abbreviateIDR(amount: number | string): string {
 
   return formatToIDR(numAmount)
 }
+
+/**
+ * Default currency formatter (alias for formatToIDR)
+ * @param amount - The amount to format
+ * @returns Formatted currency string
+ */
+export function formatCurrency(amount: number | string): string {
+  return formatToIDR(amount)
+}

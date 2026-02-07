@@ -33,7 +33,7 @@ export default function SignInPage() {
           // No admin exists, redirect to signup
           router.push("/signup");
         }
-      } catch (err) {
+      } catch {
         setError("Failed to check admin status");
       } finally {
         setIsCheckingAdmin(false);
@@ -62,7 +62,7 @@ export default function SignInPage() {
 
       // Use window.location for a clean redirect after sign-in
       window.location.href = "/admin";
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
       setIsLoading(false);
     }

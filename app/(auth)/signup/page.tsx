@@ -39,7 +39,7 @@ export default function SignUpPage() {
         } else {
           setIsFirstAdmin(true);
         }
-      } catch (err) {
+      } catch {
         setError("Failed to check admin status");
       } finally {
         setIsCheckingAdmin(false);
@@ -98,7 +98,7 @@ export default function SignUpPage() {
 
       router.push("/admin");
       router.refresh();
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setIsLoading(false);

@@ -10,6 +10,9 @@ import {
   Settings,
   BarChart3,
   LogOut,
+  FolderTree,
+  PackageOpen,
+  Image,
 } from "lucide-react"
 
 import {
@@ -38,6 +41,21 @@ const menuItems = [
     title: "Products",
     url: "/admin/products",
     icon: Package,
+  },
+  {
+    title: "Categories",
+    url: "/admin/categories",
+    icon: FolderTree,
+  },
+  {
+    title: "Inventory",
+    url: "/admin/inventory",
+    icon: PackageOpen,
+  },
+  {
+    title: "Carousel",
+    url: "/admin/carousel",
+    icon: Image,
   },
   {
     title: "Orders",

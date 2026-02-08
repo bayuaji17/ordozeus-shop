@@ -5,6 +5,9 @@ import { ProductList } from "@/components/admin/products/product-list";
 import { ProductPagination } from "@/components/admin/products/product-pagination";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -76,6 +79,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             Manage your product inventory
           </p>
         </div>
+        <Link href="/admin/products/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Product
+          </Button>
+        </Link>
       </div>
 
       <Suspense fallback={<ProductsLoading />}>

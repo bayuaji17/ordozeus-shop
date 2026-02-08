@@ -22,6 +22,20 @@
       "when": 1770392205561,
       "tag": "0002_lazy_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770483698294,
+      "tag": "0003_square_texas_twister",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770486471829,
+      "tag": "0004_closed_aaron_stack",
+      "breakpoints": true
     }
   ]
 }

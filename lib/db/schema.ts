@@ -8,6 +8,7 @@ import {
   varchar,
   integer,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -71,6 +72,12 @@ export const inventoryTypeEnum = pgEnum("inventory_type", [
   "in",
   "out",
   "adjust",
+]);
+
+export const carouselStatusEnum = pgEnum("carousel_status", [
+  "active",
+  "inactive",
+  "scheduled",
 ]);
 
 export const products = pgTable("products", {
@@ -174,3 +181,143 @@ export const inventoryMovements = pgTable("inventory_movements", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const productImages = pgTable("product_images", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  productId: uuid("product_id")
+    .references(() => products.id, { onDelete: "cascade" })
+    .notNull(),
+
+  // R2 storage details
+  url: text("url").notNull(), // Public R2 URL
+  key: text("key").notNull(), // R2 object key (for deletion)
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileSize: integer("file_size").notNull(), // bytes
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
+
+  // Image metadata
+  width: integer("width"),
+  height: integer("height"),
+  altText: varchar("alt_text", { length: 255 }),
+
+  // Ordering
+  displayOrder: integer("display_order").notNull().default(0),
+  isPrimary: boolean("is_primary").default(false).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const carousels = pgTable("carousels", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Basic Info
+  title: varchar("title", { length: 255 }).notNull(),
+  subtitle: text("subtitle"),
+  description: text("description"),
+
+  // Image (R2 storage)
+  imageUrl: text("image_url").notNull(),
+  imageKey: text("image_key").notNull(), // R2 object key for deletion
+
+  // Call to Action
+  ctaText: varchar("cta_text", { length: 100 }),
+  ctaLink: varchar("cta_link", { length: 500 }),
+
+  // Display & Ordering
+  displayOrder: integer("display_order").notNull().default(0),
+
+  // Status & Scheduling
+  status: carouselStatusEnum("status").default("inactive").notNull(),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+
+  // Styling (optional)
+  backgroundColor: varchar("background_color", { length: 50 }),
+  textColor: varchar("text_color", { length: 50 }),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================================================
+// RELATIONS
+// ============================================================================
+
+export const productsRelations = relations(products, ({ many }) => ({
+  productCategories: many(productCategories),
+  productOptions: many(productOptions),
+  productVariants: many(productVariants),
+  inventoryMovements: many(inventoryMovements),
+  productImages: many(productImages),
+}));
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  productCategories: many(productCategories),
+}));
+
+export const productCategoriesRelations = relations(productCategories, ({ one }) => ({
+  product: one(products, {
+    fields: [productCategories.productId],
+    references: [products.id],
+  }),
+  category: one(categories, {
+    fields: [productCategories.categoryId],
+    references: [categories.id],
+  }),
+}));
+
+export const productOptionsRelations = relations(productOptions, ({ one, many }) => ({
+  product: one(products, {
+    fields: [productOptions.productId],
+    references: [products.id],
+  }),
+  values: many(productOptionValues),
+}));
+
+export const productOptionValuesRelations = relations(productOptionValues, ({ one, many }) => ({
+  option: one(productOptions, {
+    fields: [productOptionValues.optionId],
+    references: [productOptions.id],
+  }),
+  variantValues: many(productVariantValues),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
+  product: one(products, {
+    fields: [productVariants.productId],
+    references: [products.id],
+  }),
+  variantValues: many(productVariantValues),
+  inventoryMovements: many(inventoryMovements),
+}));
+
+export const productVariantValuesRelations = relations(productVariantValues, ({ one }) => ({
+  variant: one(productVariants, {
+    fields: [productVariantValues.variantId],
+    references: [productVariants.id],
+  }),
+  optionValue: one(productOptionValues, {
+    fields: [productVariantValues.optionValueId],
+    references: [productOptionValues.id],
+  }),
+}));
+
+export const inventoryMovementsRelations = relations(inventoryMovements, ({ one }) => ({
+  product: one(products, {
+    fields: [inventoryMovements.productId],
+    references: [products.id],
+  }),
+  variant: one(productVariants, {
+    fields: [inventoryMovements.variantId],
+    references: [productVariants.id],
+  }),
+}));
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+  product: one(products, {
+    fields: [productImages.productId],
+    references: [products.id],
+  }),
+}));

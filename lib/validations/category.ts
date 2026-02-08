@@ -22,7 +22,7 @@ export const categorySchema = z.object({
   type: z.enum(["man", "woman", "unisex"], {
     errorMap: () => ({ message: "Please select a valid gender type" }),
   }),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 export const updateCategorySchema = categorySchema.partial().extend({

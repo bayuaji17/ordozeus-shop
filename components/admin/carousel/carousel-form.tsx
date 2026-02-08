@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,18 +18,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CarouselImageUpload } from "./carousel-image-upload";
 import { createCarousel, updateCarousel } from "@/lib/actions/carousel";
-import { carouselSchema, type CarouselFormData } from "@/lib/validations/carousel";
+import {
+  carouselSchema,
+  type CarouselFormData,
+} from "@/lib/validations/carousel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
@@ -46,6 +47,9 @@ interface CarouselFormProps {
   };
 }
 
+type CarouselFormInput = z.input<typeof carouselSchema>;
+type CarouselFormOutput = z.output<typeof carouselSchema>;
+
 export function CarouselForm({ mode, initialData }: CarouselFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,10 +59,10 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
   } | null>(
     initialData?.imageUrl && initialData?.imageKey
       ? { url: initialData.imageUrl, key: initialData.imageKey }
-      : null
+      : null,
   );
 
-  const form = useForm<CarouselFormData>({
+  const form = useForm<CarouselFormInput, unknown, CarouselFormOutput>({
     resolver: zodResolver(carouselSchema),
     defaultValues: {
       title: initialData?.title || "",
@@ -70,14 +74,18 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
       ctaLink: initialData?.ctaLink || "",
       displayOrder: initialData?.displayOrder || 0,
       status: initialData?.status || "inactive",
-      startDate: initialData?.startDate ? new Date(initialData.startDate) : undefined,
+      startDate: initialData?.startDate
+        ? new Date(initialData.startDate)
+        : undefined,
       endDate: initialData?.endDate ? new Date(initialData.endDate) : undefined,
       backgroundColor: initialData?.backgroundColor || "",
       textColor: initialData?.textColor || "",
     },
   });
 
-  const onSubmit = async (data: CarouselFormData) => {
+  const onSubmit = async (data: CarouselFormOutput) => {
+    const carouselId = initialData?.id;
+
     if (!imageData) {
       toast.error("Please upload an image");
       return;
@@ -96,14 +104,18 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
       if (mode === "create") {
         result = await createCarousel(formData);
       } else {
-        result = await updateCarousel(initialData?.id!, formData);
+        if (!carouselId) {
+          toast.error("Carousel ID is missing");
+          return;
+        }
+        result = await updateCarousel(carouselId, formData);
       }
 
       if (result.success) {
         toast.success(
           mode === "create"
             ? "Carousel created successfully"
-            : "Carousel updated successfully"
+            : "Carousel updated successfully",
         );
         router.push("/admin/carousel");
         router.refresh();
@@ -119,216 +131,244 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Image Upload */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Carousel Image</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CarouselImageUpload
-              currentImage={imageData}
-              onImageUploaded={(data) => {
-                setImageData(data);
-                form.setValue("imageUrl", data.url);
-                form.setValue("imageKey", data.key);
-              }}
-              onImageRemoved={() => {
-                setImageData(null);
-                form.setValue("imageUrl", "");
-                form.setValue("imageKey", "");
-              }}
-              disabled={isSubmitting}
-            />
-          </CardContent>
-        </Card>
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      {/* Image Upload */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Carousel Image</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CarouselImageUpload
+            currentImage={imageData}
+            onImageUploaded={(data) => {
+              setImageData(data);
+              form.setValue("imageUrl", data.url);
+              form.setValue("imageKey", data.key);
+            }}
+            onImageRemoved={() => {
+              setImageData(null);
+              form.setValue("imageUrl", "");
+              form.setValue("imageKey", "");
+            }}
+            disabled={isSubmitting}
+          />
+        </CardContent>
+      </Card>
 
-        {/* Basic Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
+      {/* Basic Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Controller
               control={form.control}
               name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title *</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter carousel title"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="carousel-title">Title *</FieldLabel>
+                  <Input
+                    {...field}
+                    id="carousel-title"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="Enter carousel title"
+                    disabled={isSubmitting}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
 
-            <FormField
+            <Controller
               control={form.control}
               name="subtitle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subtitle</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter subtitle (optional)"
-                      {...field}
-                      value={field.value || ""}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="carousel-subtitle">Subtitle</FieldLabel>
+                  <Input
+                    {...field}
+                    id="carousel-subtitle"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="Enter subtitle (optional)"
+                    value={field.value || ""}
+                    disabled={isSubmitting}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
 
-            <FormField
+            <Controller
               control={form.control}
               name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter description (optional)"
-                      rows={4}
-                      {...field}
-                      value={field.value || ""}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="carousel-description">
+                    Description
+                  </FieldLabel>
+                  <Textarea
+                    {...field}
+                    id="carousel-description"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="Enter description (optional)"
+                    rows={4}
+                    value={field.value || ""}
+                    disabled={isSubmitting}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-          </CardContent>
-        </Card>
+          </FieldGroup>
+        </CardContent>
+      </Card>
 
-        {/* Call to Action */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Call to Action</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
+      {/* Call to Action */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Call to Action</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Controller
               control={form.control}
               name="ctaText"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Button Text</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='e.g., "Shop Now", "Learn More"'
-                      {...field}
-                      value={field.value || ""}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormDescription>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="carousel-cta-text">
+                    Button Text
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="carousel-cta-text"
+                    aria-invalid={fieldState.invalid}
+                    placeholder='e.g., "Shop Now", "Learn More"'
+                    value={field.value || ""}
+                    disabled={isSubmitting}
+                  />
+                  <FieldDescription>
                     Text displayed on the call-to-action button
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                  </FieldDescription>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
 
-            <FormField
+            <Controller
               control={form.control}
               name="ctaLink"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Button Link</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="url"
-                      placeholder="https://example.com/page"
-                      {...field}
-                      value={field.value || ""}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormDescription>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="carousel-cta-link">
+                    Button Link
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="carousel-cta-link"
+                    type="url"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="https://example.com/page"
+                    value={field.value || ""}
+                    disabled={isSubmitting}
+                  />
+                  <FieldDescription>
                     URL where the button should navigate to
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                  </FieldDescription>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-          </CardContent>
-        </Card>
+          </FieldGroup>
+        </CardContent>
+      </Card>
 
-        {/* Status & Scheduling */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Status & Scheduling</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
+      {/* Status & Scheduling */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Status & Scheduling</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Controller
               control={form.control}
               name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="carousel-status">Status</FieldLabel>
                   <Select
+                    name={field.name}
+                    value={field.value}
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
                     disabled={isSubmitting}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
+                    <SelectTrigger
+                      id="carousel-status"
+                      aria-invalid={fieldState.invalid}
+                    >
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="inactive">Inactive</SelectItem>
                       <SelectItem value="scheduled">Scheduled</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>
+                  <FieldDescription>
                     Active items are visible on the homepage
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                  </FieldDescription>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
+              <Controller
                 control={form.control}
                 name="startDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Start Date (Optional)</FormLabel>
+                render={({ field, fieldState }) => (
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="flex flex-col"
+                  >
+                    <FieldLabel htmlFor="carousel-start-date">
+                      Start Date (Optional)
+                    </FieldLabel>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                            disabled={isSubmitting}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
+                        <Button
+                          id="carousel-start-date"
+                          variant="outline"
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                          disabled={isSubmitting}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value ?? undefined}
                           onSelect={field.onChange}
                           disabled={(date) =>
                             date < new Date(new Date().setHours(0, 0, 0, 0))
@@ -337,44 +377,50 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormDescription>
+                    <FieldDescription>
                       When to start showing this carousel
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
-              <FormField
+              <Controller
                 control={form.control}
                 name="endDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>End Date (Optional)</FormLabel>
+                render={({ field, fieldState }) => (
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="flex flex-col"
+                  >
+                    <FieldLabel htmlFor="carousel-end-date">
+                      End Date (Optional)
+                    </FieldLabel>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                            disabled={isSubmitting}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
+                        <Button
+                          id="carousel-end-date"
+                          variant="outline"
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                          disabled={isSubmitting}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value ?? undefined}
                           onSelect={field.onChange}
                           disabled={(date) =>
                             date < new Date(new Date().setHours(0, 0, 0, 0))
@@ -383,92 +429,104 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormDescription>
+                    <FieldDescription>
                       When to stop showing this carousel
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
             </div>
-          </CardContent>
-        </Card>
+          </FieldGroup>
+        </CardContent>
+      </Card>
 
-        {/* Styling (Optional) */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Styling (Optional)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Styling (Optional) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Styling (Optional)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
+              <Controller
                 control={form.control}
                 name="backgroundColor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Background Color</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="#000000 or transparent"
-                        {...field}
-                        value={field.value || ""}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormDescription>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="carousel-bg-color">
+                      Background Color
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id="carousel-bg-color"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="#000000 or transparent"
+                      value={field.value || ""}
+                      disabled={isSubmitting}
+                    />
+                    <FieldDescription>
                       Hex color or CSS color name
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
-              <FormField
+              <Controller
                 control={form.control}
                 name="textColor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Text Color</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="#ffffff"
-                        {...field}
-                        value={field.value || ""}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormDescription>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="carousel-text-color">
+                      Text Color
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id="carousel-text-color"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="#ffffff"
+                      value={field.value || ""}
+                      disabled={isSubmitting}
+                    />
+                    <FieldDescription>
                       Hex color or CSS color name
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
             </div>
-          </CardContent>
-        </Card>
+          </FieldGroup>
+        </CardContent>
+      </Card>
 
-        {/* Form Actions */}
-        <div className="flex justify-end gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting || !imageData}>
-            {isSubmitting
-              ? mode === "create"
-                ? "Creating..."
-                : "Updating..."
-              : mode === "create"
+      {/* Form Actions */}
+      <div className="flex justify-end gap-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.back()}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting || !imageData}>
+          {isSubmitting
+            ? mode === "create"
+              ? "Creating..."
+              : "Updating..."
+            : mode === "create"
               ? "Create Carousel"
               : "Update Carousel"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+        </Button>
+      </div>
+    </form>
   );
 }

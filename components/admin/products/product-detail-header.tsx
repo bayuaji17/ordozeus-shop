@@ -65,7 +65,9 @@ export function ProductDetailHeader({ product }: ProductDetailHeaderProps) {
     }
   };
 
-  const handleStatusChange = async (status: "draft" | "active" | "archived") => {
+  const handleStatusChange = async (
+    status: "draft" | "active" | "archived",
+  ) => {
     setIsUpdatingStatus(true);
     const result = await toggleProductStatus(product.id, status);
 
@@ -145,8 +147,8 @@ export function ProductDetailHeader({ product }: ProductDetailHeaderProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Product</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{product.name}&quot;? This will set
-              the product status to archived.
+              Are you sure you want to delete &quot;{product.name}&quot;? This
+              will set the product status to archived.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

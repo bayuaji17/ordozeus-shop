@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { carousels } from "@/lib/db/schema";
-import { eq, and, or, like, desc, asc, gte, lte } from "drizzle-orm";
+import { eq, and, or, like, desc, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   carouselSchema,
@@ -44,10 +44,7 @@ export async function getCarouselItems(filters: CarouselFilters = {}) {
     const offset = (page - 1) * limit;
 
     // Build the base query
-    let query = db
-      .select()
-      .from(carousels)
-      .$dynamic();
+    let query = db.select().from(carousels).$dynamic();
 
     // Apply filters
     const conditions = [];
@@ -58,8 +55,8 @@ export async function getCarouselItems(filters: CarouselFilters = {}) {
         or(
           like(carousels.title, `%${search}%`),
           like(carousels.subtitle, `%${search}%`),
-          like(carousels.description, `%${search}%`)
-        )
+          like(carousels.description, `%${search}%`),
+        ),
       );
     }
 
@@ -74,9 +71,11 @@ export async function getCarouselItems(filters: CarouselFilters = {}) {
 
     // Apply sorting
     const orderByColumn =
-      sortBy === "title" ? carousels.title :
-      sortBy === "created" ? carousels.createdAt :
-      carousels.displayOrder;
+      sortBy === "title"
+        ? carousels.title
+        : sortBy === "created"
+          ? carousels.createdAt
+          : carousels.displayOrder;
 
     const orderDirection = sortOrder === "asc" ? asc : desc;
     query = query.orderBy(orderDirection(orderByColumn));
@@ -158,6 +157,13 @@ export async function createCarousel(data: CarouselFormData) {
     // Validate input
     const validatedData = carouselSchema.parse(data);
 
+    if (!validatedData.imageUrl || !validatedData.imageKey) {
+      return {
+        success: false,
+        error: "Carousel image is required",
+      };
+    }
+
     // Get the highest display order
     const maxOrderResult = await db
       .select({ maxOrder: carousels.displayOrder })
@@ -165,17 +171,29 @@ export async function createCarousel(data: CarouselFormData) {
       .orderBy(desc(carousels.displayOrder))
       .limit(1);
 
-    const nextOrder = maxOrderResult.length > 0
-      ? (maxOrderResult[0].maxOrder || 0) + 1
-      : 0;
+    const nextOrder =
+      maxOrderResult.length > 0 ? (maxOrderResult[0].maxOrder || 0) + 1 : 0;
+
+    const createPayload = {
+      title: validatedData.title,
+      subtitle: validatedData.subtitle ?? null,
+      description: validatedData.description ?? null,
+      imageUrl: validatedData.imageUrl,
+      imageKey: validatedData.imageKey,
+      ctaText: validatedData.ctaText ?? null,
+      ctaLink: validatedData.ctaLink || null,
+      displayOrder: nextOrder,
+      status: validatedData.status,
+      startDate: validatedData.startDate ?? null,
+      endDate: validatedData.endDate ?? null,
+      backgroundColor: validatedData.backgroundColor ?? null,
+      textColor: validatedData.textColor ?? null,
+    } satisfies typeof carousels.$inferInsert;
 
     // Create carousel
     const [newCarousel] = await db
       .insert(carousels)
-      .values({
-        ...validatedData,
-        displayOrder: nextOrder,
-      })
+      .values(createPayload)
       .returning();
 
     revalidatePath("/admin/carousel");
@@ -209,6 +227,13 @@ export async function updateCarousel(id: string, data: CarouselFormData) {
     // Validate input
     const validatedData = carouselSchema.parse(data);
 
+    if (!validatedData.imageUrl || !validatedData.imageKey) {
+      return {
+        success: false,
+        error: "Carousel image is required",
+      };
+    }
+
     // Check if carousel exists
     const existing = await getCarouselById(id);
     if (!existing) {
@@ -218,13 +243,26 @@ export async function updateCarousel(id: string, data: CarouselFormData) {
       };
     }
 
+    const updatePayload = {
+      title: validatedData.title,
+      subtitle: validatedData.subtitle ?? null,
+      description: validatedData.description ?? null,
+      imageUrl: validatedData.imageUrl,
+      imageKey: validatedData.imageKey,
+      ctaText: validatedData.ctaText ?? null,
+      ctaLink: validatedData.ctaLink || null,
+      status: validatedData.status,
+      startDate: validatedData.startDate ?? null,
+      endDate: validatedData.endDate ?? null,
+      backgroundColor: validatedData.backgroundColor ?? null,
+      textColor: validatedData.textColor ?? null,
+      updatedAt: new Date(),
+    };
+
     // Update carousel
     const [updatedCarousel] = await db
       .update(carousels)
-      .set({
-        ...validatedData,
-        updatedAt: new Date(),
-      })
+      .set(updatePayload)
       .where(eq(carousels.id, id))
       .returning();
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
-import { MoreVertical, Edit, Trash2, Eye, Power } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Power } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,7 +63,7 @@ export function CarouselCard({ carousel }: CarouselCardProps) {
       } else {
         toast.error(result.error || "Failed to delete carousel");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while deleting");
     } finally {
       setIsDeleting(false);
@@ -81,13 +81,13 @@ export function CarouselCard({ carousel }: CarouselCardProps) {
 
       if (result.success) {
         toast.success(
-          `Carousel ${newStatus === "active" ? "activated" : "deactivated"}`
+          `Carousel ${newStatus === "active" ? "activated" : "deactivated"}`,
         );
         router.refresh();
       } else {
         toast.error(result.error || "Failed to update status");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setIsTogglingStatus(false);
@@ -97,7 +97,11 @@ export function CarouselCard({ carousel }: CarouselCardProps) {
   const getStatusBadge = () => {
     switch (carousel.status) {
       case "active":
-        return <Badge variant="default" className="bg-green-500">Active</Badge>;
+        return (
+          <Badge variant="default" className="bg-green-500">
+            Active
+          </Badge>
+        );
       case "scheduled":
         return <Badge variant="secondary">Scheduled</Badge>;
       case "inactive":
@@ -109,10 +113,10 @@ export function CarouselCard({ carousel }: CarouselCardProps) {
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow pt-0 pb-6">
         <CardContent className="p-0">
           {/* Image Preview */}
-          <div className="relative aspect-[21/9] bg-muted">
+          <div className="relative aspect-21/9 bg-muted">
             <Image
               src={carousel.imageUrl}
               alt={carousel.title}
@@ -217,8 +221,8 @@ export function CarouselCard({ carousel }: CarouselCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Carousel?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{carousel.title}" and remove the image
-              from storage. This action cannot be undone.
+              This will permanently delete &quot;{carousel.title}&quot; and
+              remove the image from storage. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

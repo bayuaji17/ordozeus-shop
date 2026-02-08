@@ -14,7 +14,13 @@ interface CarouselPageProps {
   }>;
 }
 
-async function CarouselList({ searchParams }: { searchParams: any }) {
+type ResolvedSearchParams = {
+  search?: string;
+  status?: "all" | "active" | "inactive" | "scheduled";
+  page?: string;
+};
+
+async function CarouselList({ searchParams }: { searchParams: ResolvedSearchParams }) {
   const { search, status, page } = searchParams;
 
   const result = await getCarouselItems({
@@ -75,7 +81,9 @@ function CarouselListSkeleton() {
   );
 }
 
-export default async function CarouselPage({ searchParams }: CarouselPageProps) {
+export default async function CarouselPage({
+  searchParams,
+}: CarouselPageProps) {
   const params = await searchParams;
 
   return (

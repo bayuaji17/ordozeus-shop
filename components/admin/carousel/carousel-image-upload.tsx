@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { X, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CAROUSEL_VALIDATION } from "@/lib/validations/carousel";
@@ -27,7 +27,7 @@ export function CarouselImageUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(
-    currentImage?.url || null
+    currentImage?.url || null,
   );
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -136,9 +136,12 @@ export function CarouselImageUpload({
 
     try {
       // Delete from R2
-      await fetch(`/api/carousel/upload?key=${encodeURIComponent(currentImage.key)}`, {
-        method: "DELETE",
-      });
+      await fetch(
+        `/api/carousel/upload?key=${encodeURIComponent(currentImage.key)}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       setPreview(null);
       onImageRemoved();
@@ -203,7 +206,7 @@ export function CarouselImageUpload({
                 "aspect-[21/9] border-2 border-dashed rounded-lg p-8 text-center transition-colors flex flex-col items-center justify-center",
                 isDragging && "border-primary bg-primary/5",
                 disabled && "opacity-50 cursor-not-allowed",
-                !disabled && "cursor-pointer hover:border-primary/50"
+                !disabled && "cursor-pointer hover:border-primary/50",
               )}
               onClick={disabled ? undefined : openFilePicker}
             >
@@ -239,7 +242,10 @@ export function CarouselImageUpload({
           {/* Image Info */}
           {preview && !isUploading && (
             <div className="mt-4 text-sm text-muted-foreground">
-              <p>Image will be automatically optimized and converted to WebP format.</p>
+              <p>
+                Image will be automatically optimized and converted to WebP
+                format.
+              </p>
             </div>
           )}
         </CardContent>

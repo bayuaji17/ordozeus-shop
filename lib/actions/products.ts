@@ -9,6 +9,8 @@ import {
   productOptions,
   productOptionValues,
   productVariantValues,
+  productImages,
+  inventoryMovements,
 } from "@/lib/db/schema";
 import { sql, eq, like, or, and, desc, asc, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -17,7 +19,6 @@ import {
   type ProductFormData,
   type VariantProductFormData,
 } from "@/lib/validations/product";
-import { generateSlug } from "@/lib/utils/slug";
 
 export type ProductStatus = "draft" | "active" | "archived";
 export type StockLevel = "all" | "in_stock" | "low_stock" | "out_of_stock";
@@ -85,8 +86,8 @@ export async function getProducts(filters: ProductFilters = {}) {
         or(
           like(products.name, `%${search}%`),
           like(products.slug, `%${search}%`),
-          like(products.description, `%${search}%`)
-        )
+          like(products.description, `%${search}%`),
+        ),
       );
     }
 
@@ -105,15 +106,19 @@ export async function getProducts(filters: ProductFilters = {}) {
     // Sorting
     if (sortBy === "name") {
       query = query.orderBy(
-        sortOrder === "asc" ? asc(products.name) : desc(products.name)
+        sortOrder === "asc" ? asc(products.name) : desc(products.name),
       );
     } else if (sortBy === "price") {
       query = query.orderBy(
-        sortOrder === "asc" ? asc(products.basePrice) : desc(products.basePrice)
+        sortOrder === "asc"
+          ? asc(products.basePrice)
+          : desc(products.basePrice),
       );
     } else {
       query = query.orderBy(
-        sortOrder === "asc" ? asc(products.createdAt) : desc(products.createdAt)
+        sortOrder === "asc"
+          ? asc(products.createdAt)
+          : desc(products.createdAt),
       );
     }
 
@@ -168,7 +173,10 @@ export async function getProductById(id: string) {
           },
         },
         productImages: {
-          orderBy: (images, { asc, desc }) => [asc(images.displayOrder), desc(images.createdAt)],
+          orderBy: (images, { asc, desc }) => [
+            asc(images.displayOrder),
+            desc(images.createdAt),
+          ],
         },
       },
     });
@@ -225,7 +233,10 @@ export async function getAllCategories() {
         productCount: sql<number>`cast(count(${productCategories.productId}) as integer)`,
       })
       .from(categories)
-      .leftJoin(productCategories, eq(categories.id, productCategories.categoryId))
+      .leftJoin(
+        productCategories,
+        eq(categories.id, productCategories.categoryId),
+      )
       .groupBy(categories.id)
       .orderBy(asc(categories.name));
 
@@ -246,7 +257,7 @@ export async function getAllCategories() {
 function generateVariantSKU(
   productSlug: string,
   optionValues: string[],
-  index: number
+  index: number,
 ): string {
   const initials = optionValues
     .map((val) => val.substring(0, 2).toUpperCase())
@@ -310,7 +321,7 @@ export async function createProduct(data: ProductFormData) {
           validatedData.categoryIds.map((categoryId) => ({
             productId: product.id,
             categoryId,
-          }))
+          })),
         );
       }
 
@@ -355,7 +366,7 @@ export async function createProduct(data: ProductFormData) {
           const sku = generateVariantSKU(
             product.slug,
             combination.map((v) => v.value),
-            i
+            i,
           );
 
           const [variant] = await tx
@@ -456,14 +467,16 @@ export async function updateProduct(id: string, data: ProductFormData) {
         .where(eq(products.id, id));
 
       // Update category associations
-      await tx.delete(productCategories).where(eq(productCategories.productId, id));
+      await tx
+        .delete(productCategories)
+        .where(eq(productCategories.productId, id));
 
       if (validatedData.categoryIds.length > 0) {
         await tx.insert(productCategories).values(
           validatedData.categoryIds.map((categoryId) => ({
             productId: id,
             categoryId,
-          }))
+          })),
         );
       }
 
@@ -497,7 +510,7 @@ export async function updateProduct(id: string, data: ProductFormData) {
 }
 
 /**
- * Delete a product (soft delete by setting status to archived)
+ * Delete a product permanently (hard delete)
  */
 export async function deleteProduct(id: string) {
   try {
@@ -512,16 +525,79 @@ export async function deleteProduct(id: string) {
       };
     }
 
-    // Soft delete: set status to archived
-    await db
-      .update(products)
-      .set({
-        status: "archived",
-        updatedAt: new Date(),
-      })
-      .where(eq(products.id, id));
+    // Collect image keys for R2 cleanup after DB deletion
+    const images = await db.query.productImages.findMany({
+      where: eq(productImages.productId, id),
+      columns: {
+        key: true,
+      },
+    });
+    const imageKeys = images.map((image) => image.key);
+
+    await db.transaction(async (tx) => {
+      // Remove inventory records first (references product and variants)
+      await tx
+        .delete(inventoryMovements)
+        .where(eq(inventoryMovements.productId, id));
+
+      // Remove product-category links
+      await tx
+        .delete(productCategories)
+        .where(eq(productCategories.productId, id));
+
+      // Remove variant values and variants for this product
+      const variants = await tx.query.productVariants.findMany({
+        where: eq(productVariants.productId, id),
+        columns: {
+          id: true,
+        },
+      });
+      const variantIds = variants.map((variant) => variant.id);
+
+      if (variantIds.length > 0) {
+        await tx
+          .delete(productVariantValues)
+          .where(inArray(productVariantValues.variantId, variantIds));
+      }
+
+      await tx.delete(productVariants).where(eq(productVariants.productId, id));
+
+      // Remove option values and options for this product
+      const options = await tx.query.productOptions.findMany({
+        where: eq(productOptions.productId, id),
+        columns: {
+          id: true,
+        },
+      });
+      const optionIds = options.map((option) => option.id);
+
+      if (optionIds.length > 0) {
+        await tx
+          .delete(productOptionValues)
+          .where(inArray(productOptionValues.optionId, optionIds));
+      }
+
+      await tx.delete(productOptions).where(eq(productOptions.productId, id));
+
+      // Finally delete the product (product_images rows cascade-delete)
+      await tx.delete(products).where(eq(products.id, id));
+    });
+
+    // Delete images from R2 storage after successful DB delete
+    if (imageKeys.length > 0) {
+      try {
+        const { deleteManyFromR2 } = await import("@/lib/r2");
+        await deleteManyFromR2(imageKeys);
+      } catch (r2Error) {
+        console.error(
+          "Error deleting product images from R2 (continuing):",
+          r2Error,
+        );
+      }
+    }
 
     revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${id}`);
 
     return {
       success: true,
@@ -541,7 +617,7 @@ export async function deleteProduct(id: string) {
  */
 export async function toggleProductStatus(
   id: string,
-  status: "draft" | "active" | "archived"
+  status: "draft" | "active" | "archived",
 ) {
   try {
     const product = await db.query.products.findFirst({

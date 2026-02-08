@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -16,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+  FieldLegend,
+} from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -38,11 +45,83 @@ interface Category {
   type: "man" | "woman" | "unisex";
 }
 
+interface ProductOptionValue {
+  id: string;
+  value: string;
+}
+
+interface ProductOption {
+  id: string;
+  name: string;
+  values: ProductOptionValue[];
+}
+
+interface ProductCategory {
+  category: {
+    id: string;
+    name: string;
+    type: "man" | "woman" | "unisex";
+  };
+}
+
+interface ExistingProduct {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  basePrice: number;
+  status: "draft" | "active" | "archived";
+  hasVariant: boolean;
+  stock: number | null;
+  options?: ProductOption[];
+  productCategories?: ProductCategory[];
+}
+
 interface ProductFormProps {
   mode: "create" | "edit";
-  product?: any; // For edit mode
+  product?: ExistingProduct;
   categories: Category[];
 }
+
+// Form value types that match the discriminated union schema
+type SimpleProductFormValues = {
+  name: string;
+  slug: string;
+  description?: string;
+  basePrice: number;
+  status?: "draft" | "active" | "archived";
+  hasVariant: false;
+  stock: number;
+  categoryIds?: string[];
+};
+
+type VariantProductFormValues = {
+  name: string;
+  slug: string;
+  description?: string;
+  basePrice: number;
+  status?: "draft" | "active" | "archived";
+  hasVariant: true;
+  categoryIds?: string[];
+  options: {
+    id?: string;
+    name: string;
+    values: {
+      id?: string;
+      value: string;
+    }[];
+  }[];
+  variants: {
+    id?: string;
+    sku: string;
+    price: number;
+    stock: number;
+    optionValueIds: string[];
+    isActive?: boolean;
+  }[];
+};
+
+type FormValues = SimpleProductFormValues | VariantProductFormValues;
 
 // Helper to generate cartesian product
 function cartesianProduct<T>(arrays: T[][]): T[][] {
@@ -67,25 +146,20 @@ function generateSKU(slug: string, values: string[], index: number): string {
 export function ProductForm({ mode, product, categories }: ProductFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [hasVariant, setHasVariant] = useState(product?.hasVariant ?? false);
   const [options, setOptions] = useState<ProductOptionData[]>(
-    product?.options?.map((opt: any) => ({
+    product?.options?.map((opt) => ({
       id: opt.id,
       name: opt.name,
-      values: opt.values.map((v: any) => ({ id: v.id, value: v.value })),
-    })) ?? []
+      values: opt.values.map((v) => ({ id: v.id, value: v.value })),
+    })) ?? [],
   );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    product?.productCategories?.map((pc: any) => pc.category.id) ?? []
+    product?.productCategories?.map((pc) => pc.category.id) ?? [],
   );
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<any>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: product?.name ?? "",
@@ -95,22 +169,28 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
       status: product?.status ?? "draft",
       hasVariant: product?.hasVariant ?? false,
       stock: product?.stock ?? 0,
-      categoryIds: product?.productCategories?.map((pc: any) => pc.category.id) ?? [],
+      categoryIds:
+        product?.productCategories?.map((pc) => pc.category.id) ?? [],
       options: [],
       variants: [],
     },
   });
 
-  const watchName = watch("name");
-  const watchSlug = watch("slug");
-  const watchBasePrice = watch("basePrice");
+  const watchName = form.watch("name");
+  const watchSlug = form.watch("slug");
+  const watchBasePrice = form.watch("basePrice");
 
-  // Auto-generate slug from name
+  // Reset slug auto-generation behavior when form mode/product changes
   useEffect(() => {
-    if (mode === "create" && watchName && !watchSlug) {
-      setValue("slug", generateSlug(watchName));
+    setIsSlugManuallyEdited(false);
+  }, [mode, product?.id]);
+
+  // Auto-generate slug from name (until slug is manually edited)
+  useEffect(() => {
+    if (watchName && !isSlugManuallyEdited) {
+      form.setValue("slug", generateSlug(watchName));
     }
-  }, [watchName, watchSlug, mode, setValue]);
+  }, [watchName, isSlugManuallyEdited, form]);
 
   // Generate variants when options change
   const generatedVariants = useMemo(() => {
@@ -141,7 +221,7 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
         sku: generateSKU(
           watchSlug || "product",
           combo.map((v) => v.value),
-          index
+          index,
         ),
         price: watchBasePrice || 0,
         stock: 0,
@@ -162,7 +242,7 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
   const handleVariantChange = (
     index: number,
     field: keyof VariantPreviewData,
-    value: any
+    value: string | number | boolean,
   ) => {
     const updated = [...variants];
     updated[index] = { ...updated[index], [field]: value };
@@ -173,45 +253,51 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
     setSelectedCategories((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
+        : [...prev, categoryId],
     );
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
 
     try {
-      const formData: ProductFormData = {
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        basePrice: parseInt(data.basePrice),
-        status: data.status,
-        hasVariant,
-        categoryIds: selectedCategories,
-        ...(hasVariant
-          ? {
-              options: options.map((opt) => ({
-                name: opt.name,
-                values: opt.values.map((v) => ({ value: v.value })),
-              })),
-              variants: variants.map((v) => ({
-                sku: v.sku,
-                price: v.price,
-                stock: v.stock,
-                optionValueIds: v.optionValueIds,
-                isActive: v.isActive,
-              })),
-            }
-          : {
-              stock: parseInt(data.stock),
-            }),
-      } as ProductFormData;
+      // Create formData based on discriminated union
+      const formData: ProductFormData = hasVariant
+        ? {
+            name: data.name,
+            slug: data.slug,
+            description: data.description,
+            basePrice: parseInt(String(data.basePrice)),
+            status: data.status ?? "draft",
+            hasVariant: true,
+            categoryIds: selectedCategories,
+            options: options.map((opt) => ({
+              name: opt.name,
+              values: opt.values.map((v) => ({ value: v.value })),
+            })),
+            variants: variants.map((v) => ({
+              sku: v.sku,
+              price: v.price,
+              stock: v.stock,
+              optionValueIds: v.optionValueIds,
+              isActive: v.isActive,
+            })),
+          }
+        : {
+            name: data.name,
+            slug: data.slug,
+            description: data.description,
+            basePrice: parseInt(String(data.basePrice)),
+            status: data.status ?? "draft",
+            hasVariant: false,
+            categoryIds: selectedCategories,
+            stock: "stock" in data ? parseInt(String(data.stock)) : 0,
+          };
 
       const result =
         mode === "create"
           ? await createProduct(formData)
-          : await updateProduct(product.id, formData);
+          : await updateProduct(product!.id, formData);
 
       if (result.success) {
         if (mode === "create") {
@@ -219,7 +305,7 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
           router.push(`/admin/products/${result.productId}`);
         } else {
           showSuccessToast.productUpdated();
-          router.push(`/admin/products/${product.id}`);
+          router.push(`/admin/products/${product!.id}`);
         }
         router.refresh();
       } else {
@@ -234,92 +320,157 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
   };
 
   // Group categories by type
-  const categoriesByType = categories.reduce((acc, cat) => {
-    if (!acc[cat.type]) acc[cat.type] = [];
-    acc[cat.type].push(cat);
-    return acc;
-  }, {} as Record<string, Category[]>);
+  const categoriesByType = categories.reduce(
+    (acc, cat) => {
+      if (!acc[cat.type]) acc[cat.type] = [];
+      acc[cat.type].push(cat);
+      return acc;
+    },
+    {} as Record<string, Category[]>,
+  );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      id="product-form"
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-6"
+    >
       {/* Basic Information */}
       <Card>
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="name">Product Name *</Label>
-            <Input
-              id="name"
-              {...register("name")}
-              placeholder="e.g., Basic T-Shirt"
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.name.message as string}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="slug">Slug *</Label>
-            <Input
-              id="slug"
-              {...register("slug")}
-              placeholder="e.g., basic-t-shirt"
-              className="font-mono"
-            />
-            {errors.slug && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.slug.message as string}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              {...register("description")}
-              placeholder="Product description..."
-              rows={4}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="basePrice">Base Price (IDR) *</Label>
-              <Input
-                id="basePrice"
-                type="number"
-                {...register("basePrice", { valueAsNumber: true })}
-                placeholder="150000"
-              />
-              {errors.basePrice && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.basePrice.message as string}
-                </p>
+        <CardContent>
+          <FieldGroup>
+            {/* Product Name */}
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="product-name">Product Name *</FieldLabel>
+                  <Input
+                    {...field}
+                    id="product-name"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="e.g., Basic T-Shirt"
+                    disabled={isSubmitting}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
-            </div>
+            />
 
-            <div>
-              <Label htmlFor="status">Status *</Label>
-              <Select
-                value={watch("status")}
-                onValueChange={(value) => setValue("status", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Slug */}
+            <Controller
+              name="slug"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="product-slug">Slug *</FieldLabel>
+                  <Input
+                    {...field}
+                    id="product-slug"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="e.g., basic-t-shirt"
+                    className="font-mono"
+                    disabled={isSubmitting}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setIsSlugManuallyEdited(true);
+                    }}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            {/* Description */}
+            <Controller
+              name="description"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="product-description">
+                    Description
+                  </FieldLabel>
+                  <Textarea
+                    {...field}
+                    id="product-description"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="Product description..."
+                    rows={4}
+                    disabled={isSubmitting}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            {/* Base Price and Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Controller
+                name="basePrice"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="product-base-price">
+                      Base Price (IDR) *
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id="product-base-price"
+                      type="number"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="150000"
+                      disabled={isSubmitting}
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="status"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="product-status">Status *</FieldLabel>
+                    <Select
+                      name={field.name}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger
+                        id="product-status"
+                        aria-invalid={fieldState.invalid}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
             </div>
-          </div>
+          </FieldGroup>
         </CardContent>
       </Card>
 
@@ -330,26 +481,29 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {Object.entries(categoriesByType).map(([type, cats]) => (
-            <div key={type}>
-              <p className="text-sm font-medium mb-2 capitalize">{type}</p>
-              <div className="space-y-2">
+            <FieldSet key={type}>
+              <FieldLegend variant="label" className="capitalize">
+                {type}
+              </FieldLegend>
+              <FieldGroup data-slot="checkbox-group">
                 {cats.map((cat) => (
-                  <div key={cat.id} className="flex items-center space-x-2">
+                  <Field key={cat.id} orientation="horizontal">
                     <Checkbox
                       id={`category-${cat.id}`}
                       checked={selectedCategories.includes(cat.id)}
                       onCheckedChange={() => toggleCategory(cat.id)}
+                      disabled={isSubmitting}
                     />
-                    <Label
+                    <FieldLabel
                       htmlFor={`category-${cat.id}`}
-                      className="text-sm font-normal cursor-pointer"
+                      className="font-normal cursor-pointer"
                     >
                       {cat.name}
-                    </Label>
-                  </div>
+                    </FieldLabel>
+                  </Field>
                 ))}
-              </div>
-            </div>
+              </FieldGroup>
+            </FieldSet>
           ))}
           {categories.length === 0 && (
             <p className="text-sm text-muted-foreground italic">
@@ -367,19 +521,23 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
           <CardTitle>Product Type</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-2">
+          <Field orientation="horizontal">
             <Checkbox
               id="hasVariant"
               checked={hasVariant}
               onCheckedChange={(checked) => {
                 setHasVariant(!!checked);
-                setValue("hasVariant", !!checked);
+                form.setValue("hasVariant", !!checked);
               }}
+              disabled={isSubmitting}
             />
-            <Label htmlFor="hasVariant" className="cursor-pointer">
+            <FieldLabel
+              htmlFor="hasVariant"
+              className="cursor-pointer font-normal"
+            >
               This product has variants (e.g., different sizes, colors)
-            </Label>
-          </div>
+            </FieldLabel>
+          </Field>
         </CardContent>
       </Card>
 
@@ -390,21 +548,30 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
             <CardTitle>Stock</CardTitle>
           </CardHeader>
           <CardContent>
-            <div>
-              <Label htmlFor="stock">Stock Quantity *</Label>
-              <Input
-                id="stock"
-                type="number"
-                {...register("stock", { valueAsNumber: true })}
-                placeholder="100"
-                min="0"
-              />
-              {errors.stock && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.stock.message as string}
-                </p>
+            <Controller
+              name="stock"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="product-stock">
+                    Stock Quantity *
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="product-stock"
+                    type="number"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="100"
+                    min="0"
+                    disabled={isSubmitting}
+                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
-            </div>
+            />
           </CardContent>
         </Card>
       )}
@@ -431,7 +598,7 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" form="product-form" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {mode === "create" ? "Create Product" : "Update Product"}
         </Button>

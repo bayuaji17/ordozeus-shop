@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -22,7 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { categorySchema, type CategoryFormData } from "@/lib/validations/category";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import {
+  categorySchema,
+  type CategoryFormData,
+} from "@/lib/validations/category";
 import { createCategory, updateCategory } from "@/lib/actions/categories";
 import { generateSlug } from "@/lib/utils/slug";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
@@ -50,15 +58,9 @@ export function CategoryFormDialog({
 }: CategoryFormDialogProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    reset,
-    formState: { errors },
-  } = useForm<CategoryFormData>({
+  const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: category?.name ?? "",
@@ -68,27 +70,27 @@ export function CategoryFormDialog({
     },
   });
 
-  const watchName = watch("name");
-  const watchSlug = watch("slug");
+  const watchName = form.watch("name");
 
-  // Auto-generate slug from name (only in create mode)
+  // Auto-generate slug from name (if not manually edited)
   useEffect(() => {
-    if (mode === "create" && watchName && !watchSlug) {
-      setValue("slug", generateSlug(watchName));
+    if (watchName && !isSlugManuallyEdited) {
+      form.setValue("slug", generateSlug(watchName));
     }
-  }, [watchName, watchSlug, mode, setValue]);
+  }, [watchName, isSlugManuallyEdited, form]);
 
   // Reset form when dialog opens/closes or category changes
   useEffect(() => {
     if (open) {
-      reset({
+      form.reset({
         name: category?.name ?? "",
         slug: category?.slug ?? "",
         type: category?.type ?? "unisex",
         isActive: category?.isActive ?? true,
       });
+      setIsSlugManuallyEdited(false);
     }
-  }, [open, category, reset]);
+  }, [open, category, form]);
 
   const onSubmit = async (data: CategoryFormData) => {
     setIsSubmitting(true);
@@ -113,7 +115,9 @@ export function CategoryFormDialog({
     } catch (error) {
       console.error("Form submission error:", error);
       showErrorToast.generic(
-        mode === "create" ? "Failed to create category" : "Failed to update category"
+        mode === "create"
+          ? "Failed to create category"
+          : "Failed to update category",
       );
     } finally {
       setIsSubmitting(false);
@@ -122,7 +126,7 @@ export function CategoryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Create Category" : "Edit Category"}
@@ -134,90 +138,138 @@ export function CategoryFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Category Name *</Label>
-            <Input
-              id="name"
-              {...register("name")}
-              placeholder="e.g., Casual Wear"
-              disabled={isSubmitting}
+        <form
+          id="category-form"
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
+          <FieldGroup>
+            {/* Category Name Field */}
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="category-name">
+                    Category Name *
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="category-name"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="e.g., Casual Wear"
+                    disabled={isSubmitting}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
             />
-            {errors.name && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.name.message}
-              </p>
-            )}
-          </div>
 
-          <div>
-            <Label htmlFor="slug">Slug *</Label>
-            <Input
-              id="slug"
-              {...register("slug")}
-              placeholder="e.g., casual-wear"
-              className="font-mono"
-              disabled={isSubmitting}
+            {/* Slug Field */}
+            <Controller
+              name="slug"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="category-slug">Slug *</FieldLabel>
+                  <Input
+                    {...field}
+                    id="category-slug"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="e.g., casual-wear"
+                    className="font-mono"
+                    disabled={isSubmitting}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setIsSlugManuallyEdited(true);
+                    }}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
             />
-            {errors.slug && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.slug.message}
-              </p>
-            )}
-          </div>
 
-          <div>
-            <Label htmlFor="type">Gender Type *</Label>
-            <Select
-              value={watch("type")}
-              onValueChange={(value: "man" | "woman" | "unisex") =>
-                setValue("type", value)
-              }
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="man">Man</SelectItem>
-                <SelectItem value="woman">Woman</SelectItem>
-                <SelectItem value="unisex">Unisex</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.type && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.type.message}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isActive"
-              checked={watch("isActive")}
-              onCheckedChange={(checked) => setValue("isActive", !!checked)}
-              disabled={isSubmitting}
+            {/* Gender Type Field */}
+            <Controller
+              name="type"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="category-type">Gender Type *</FieldLabel>
+                  <Select
+                    name={field.name}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger
+                      id="category-type"
+                      aria-invalid={fieldState.invalid}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="man">Man</SelectItem>
+                      <SelectItem value="woman">Woman</SelectItem>
+                      <SelectItem value="unisex">Unisex</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
             />
-            <Label htmlFor="isActive" className="cursor-pointer">
-              Active (visible in product forms)
-            </Label>
-          </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "create" ? "Create Category" : "Update Category"}
-            </Button>
-          </DialogFooter>
+            {/* Is Active Field */}
+            <Controller
+              name="isActive"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field
+                  orientation="horizontal"
+                  data-invalid={fieldState.invalid}
+                >
+                  <Checkbox
+                    id="category-active"
+                    name={field.name}
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={isSubmitting}
+                  />
+                  <FieldLabel
+                    htmlFor="category-active"
+                    className="font-normal cursor-pointer"
+                  >
+                    Active (visible in product forms)
+                  </FieldLabel>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+          </FieldGroup>
         </form>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="category-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mode === "create" ? "Create Category" : "Update Category"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -7,83 +7,92 @@ import { z } from "zod";
  */
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ACCEPTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
 
 /**
  * Carousel form schema (create/edit)
  */
-export const carouselSchema = z.object({
-  title: z
-    .string()
-    .min(1, "Title is required")
-    .max(255, "Title must be 255 characters or less"),
+export const carouselSchema = z
+  .object({
+    title: z
+      .string()
+      .min(1, "Title is required")
+      .max(255, "Title must be 255 characters or less"),
 
-  subtitle: z
-    .string()
-    .max(500, "Subtitle must be 500 characters or less")
-    .optional()
-    .nullable(),
+    subtitle: z
+      .string()
+      .max(500, "Subtitle must be 500 characters or less")
+      .optional()
+      .nullable(),
 
-  description: z
-    .string()
-    .max(2000, "Description must be 2000 characters or less")
-    .optional()
-    .nullable(),
+    description: z
+      .string()
+      .max(2000, "Description must be 2000 characters or less")
+      .optional()
+      .nullable(),
 
-  imageUrl: z.string().url("Invalid image URL").optional(),
-  imageKey: z.string().optional(),
+    imageUrl: z.string().url("Invalid image URL").optional(),
+    imageKey: z.string().optional(),
 
-  ctaText: z
-    .string()
-    .max(100, "CTA text must be 100 characters or less")
-    .optional()
-    .nullable(),
+    ctaText: z
+      .string()
+      .max(100, "CTA text must be 100 characters or less")
+      .optional()
+      .nullable(),
 
-  ctaLink: z
-    .string()
-    .url("Invalid URL format")
-    .max(500, "URL must be 500 characters or less")
-    .optional()
-    .nullable()
-    .or(z.literal("")),
+    ctaLink: z
+      .string()
+      .url("Invalid URL format")
+      .max(500, "URL must be 500 characters or less")
+      .optional()
+      .nullable()
+      .or(z.literal("")),
 
-  displayOrder: z
-    .number()
-    .int()
-    .min(0, "Display order must be 0 or greater")
-    .default(0),
+    displayOrder: z
+      .number()
+      .int()
+      .min(0, "Display order must be 0 or greater")
+      .default(0),
 
-  status: z.enum(["active", "inactive", "scheduled"], {
-    errorMap: () => ({ message: "Please select a valid status" }),
-  }).default("inactive"),
+    status: z
+      .enum(["active", "inactive", "scheduled"], {
+        error: "Please select a valid status",
+      })
+      .default("inactive"),
 
-  startDate: z.date().optional().nullable(),
-  endDate: z.date().optional().nullable(),
+    startDate: z.date().optional().nullable(),
+    endDate: z.date().optional().nullable(),
 
-  backgroundColor: z
-    .string()
-    .max(50, "Color must be 50 characters or less")
-    .optional()
-    .nullable(),
+    backgroundColor: z
+      .string()
+      .max(50, "Color must be 50 characters or less")
+      .optional()
+      .nullable(),
 
-  textColor: z
-    .string()
-    .max(50, "Color must be 50 characters or less")
-    .optional()
-    .nullable(),
-}).refine(
-  (data) => {
-    // If both dates are provided, endDate must be after startDate
-    if (data.startDate && data.endDate) {
-      return data.endDate > data.startDate;
-    }
-    return true;
-  },
-  {
-    message: "End date must be after start date",
-    path: ["endDate"],
-  }
-);
+    textColor: z
+      .string()
+      .max(50, "Color must be 50 characters or less")
+      .optional()
+      .nullable(),
+  })
+  .refine(
+    (data) => {
+      // If both dates are provided, endDate must be after startDate
+      if (data.startDate && data.endDate) {
+        return data.endDate > data.startDate;
+      }
+      return true;
+    },
+    {
+      message: "End date must be after start date",
+      path: ["endDate"],
+    },
+  );
 
 /**
  * Carousel image upload schema
@@ -121,12 +130,14 @@ export const carouselFiltersSchema = z.object({
  * Update carousel order schema
  */
 export const updateCarouselOrderSchema = z.object({
-  carouselOrders: z.array(
-    z.object({
-      id: z.string().uuid("Invalid carousel ID"),
-      displayOrder: z.number().int().min(0),
-    })
-  ).min(1, "At least one carousel is required"),
+  carouselOrders: z
+    .array(
+      z.object({
+        id: z.string().uuid("Invalid carousel ID"),
+        displayOrder: z.number().int().min(0),
+      }),
+    )
+    .min(1, "At least one carousel is required"),
 });
 
 /**
@@ -150,7 +161,9 @@ export type CarouselImageFormData = z.infer<typeof uploadCarouselImageSchema>;
 export type CarouselFiltersData = z.infer<typeof carouselFiltersSchema>;
 export type UpdateCarouselOrderData = z.infer<typeof updateCarouselOrderSchema>;
 export type DeleteCarouselData = z.infer<typeof deleteCarouselSchema>;
-export type ToggleCarouselStatusData = z.infer<typeof toggleCarouselStatusSchema>;
+export type ToggleCarouselStatusData = z.infer<
+  typeof toggleCarouselStatusSchema
+>;
 
 // Export constants for client-side use
 export const CAROUSEL_VALIDATION = {

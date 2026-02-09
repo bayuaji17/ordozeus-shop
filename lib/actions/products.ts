@@ -360,6 +360,18 @@ export async function createProduct(data: ProductFormData) {
         const optionValueArrays = allOptions.map((opt) => opt.values);
         const combinations = cartesianProduct(optionValueArrays);
 
+        // Create a map of option value combinations to form variant data
+        // This allows us to match generated combinations with user-entered stock/price
+        const formVariantsMap = new Map<string, { price: number; stock: number; isActive?: boolean }>();
+        for (const formVariant of variantData.variants) {
+          // Use SKU as key since it's unique per combination
+          formVariantsMap.set(formVariant.sku, {
+            price: formVariant.price,
+            stock: formVariant.stock,
+            isActive: formVariant.isActive,
+          });
+        }
+
         // Insert variants
         for (let i = 0; i < combinations.length; i++) {
           const combination = combinations[i];
@@ -369,14 +381,20 @@ export async function createProduct(data: ProductFormData) {
             i,
           );
 
+          // Get user-entered values or use defaults
+          const formVariant = formVariantsMap.get(sku);
+          const variantPrice = formVariant?.price ?? product.basePrice;
+          const variantStock = formVariant?.stock ?? 0;
+          const variantIsActive = formVariant?.isActive ?? true;
+
           const [variant] = await tx
             .insert(productVariants)
             .values({
               productId: product.id,
               sku,
-              price: product.basePrice,
-              stock: 0,
-              isActive: true,
+              price: variantPrice,
+              stock: variantStock,
+              isActive: variantIsActive,
             })
             .returning();
 

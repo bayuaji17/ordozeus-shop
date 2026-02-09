@@ -1,12 +1,8 @@
 "use server";
 
 import { db } from "@/lib/db";
-import {
-  products,
-  productVariants,
-  inventoryMovements,
-} from "@/lib/db/schema";
-import { sql, eq, desc, and, or, like, gte, lte } from "drizzle-orm";
+import { products, productVariants, inventoryMovements } from "@/lib/db/schema";
+import { sql, eq, desc, and, or, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   stockAdjustmentSchema,
@@ -37,7 +33,7 @@ export async function getInventoryOverview(filters?: {
     const offset = (page - 1) * limit;
 
     // Build base query for simple products
-    let simpleProductsQuery = db
+    const simpleProductsQuery = db
       .select({
         id: products.id,
         productId: products.id,
@@ -56,15 +52,15 @@ export async function getInventoryOverview(filters?: {
           search
             ? or(
                 like(products.name, `%${search}%`),
-                like(products.slug, `%${search}%`)
+                like(products.slug, `%${search}%`),
               )
-            : undefined
-        )
+            : undefined,
+        ),
       )
       .$dynamic();
 
     // Build base query for variant products
-    let variantProductsQuery = db
+    const variantProductsQuery = db
       .select({
         id: productVariants.id,
         productId: products.id,
@@ -82,9 +78,9 @@ export async function getInventoryOverview(filters?: {
         search
           ? or(
               like(products.name, `%${search}%`),
-              like(productVariants.sku, `%${search}%`)
+              like(productVariants.sku, `%${search}%`),
             )
-          : undefined
+          : undefined,
       )
       .$dynamic();
 
@@ -139,7 +135,7 @@ export async function getInventoryOverview(filters?: {
             FROM ${productVariants}
             INNER JOIN ${products} ON ${productVariants.productId} = ${products.id}
             ${search ? sql`WHERE ${products.name} ILIKE ${"%" + search + "%"} OR ${productVariants.sku} ILIKE ${"%" + search + "%"}` : sql``}
-          ) as inventory`
+          ) as inventory`,
         );
     }
 
@@ -205,7 +201,10 @@ export async function adjustStock(data: StockAdjustmentFormData) {
         if (validatedData.type === "in") {
           newStock = currentStock + validatedData.quantity;
         } else if (validatedData.type === "out") {
-          newStock = Math.max(0, currentStock - Math.abs(validatedData.quantity));
+          newStock = Math.max(
+            0,
+            currentStock - Math.abs(validatedData.quantity),
+          );
         } else if (validatedData.type === "adjust") {
           newStock = validatedData.quantity;
         }
@@ -234,7 +233,10 @@ export async function adjustStock(data: StockAdjustmentFormData) {
         if (validatedData.type === "in") {
           newStock = currentStock + validatedData.quantity;
         } else if (validatedData.type === "out") {
-          newStock = Math.max(0, currentStock - Math.abs(validatedData.quantity));
+          newStock = Math.max(
+            0,
+            currentStock - Math.abs(validatedData.quantity),
+          );
         } else if (validatedData.type === "adjust") {
           newStock = validatedData.quantity;
         }
@@ -337,7 +339,7 @@ export async function bulkAdjustStock(data: BulkStockAdjustmentFormData) {
 export async function getInventoryHistory(
   productId?: string,
   variantId?: string,
-  limit = 50
+  limit = 50,
 ) {
   try {
     let query = db
@@ -354,7 +356,10 @@ export async function getInventoryHistory(
       })
       .from(inventoryMovements)
       .leftJoin(products, eq(inventoryMovements.productId, products.id))
-      .leftJoin(productVariants, eq(inventoryMovements.variantId, productVariants.id))
+      .leftJoin(
+        productVariants,
+        eq(inventoryMovements.variantId, productVariants.id),
+      )
       .$dynamic();
 
     const conditions = [];

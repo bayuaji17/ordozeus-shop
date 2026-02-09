@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Upload, X, AlertCircle } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -50,32 +51,35 @@ export function ProductImageUpload({
     return null;
   }, []);
 
-  const handleFiles = useCallback((fileList: FileList | null) => {
-    if (!fileList) return;
+  const handleFiles = useCallback(
+    (fileList: FileList | null) => {
+      if (!fileList) return;
 
-    const newFiles: FileWithPreview[] = [];
-    const fileArray = Array.from(fileList);
+      const newFiles: FileWithPreview[] = [];
+      const fileArray = Array.from(fileList);
 
-    // Check total count
-    if (files.length + fileArray.length > maxFiles) {
-      setUploadError(`You can only upload ${maxFiles} more image(s)`);
-      return;
-    }
+      // Check total count
+      if (files.length + fileArray.length > maxFiles) {
+        setUploadError(`You can only upload ${maxFiles} more image(s)`);
+        return;
+      }
 
-    for (const file of fileArray) {
-      const error = validateFile(file);
-      const preview = URL.createObjectURL(file);
+      for (const file of fileArray) {
+        const error = validateFile(file);
+        const preview = URL.createObjectURL(file);
 
-      newFiles.push({
-        file,
-        preview,
-        error: error || undefined,
-      });
-    }
+        newFiles.push({
+          file,
+          preview,
+          error: error || undefined,
+        });
+      }
 
-    setFiles((prev) => [...prev, ...newFiles]);
-    setUploadError(null);
-  }, [files.length, maxFiles, validateFile]);
+      setFiles((prev) => [...prev, ...newFiles]);
+      setUploadError(null);
+    },
+    [files.length, maxFiles, validateFile],
+  );
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -94,18 +98,24 @@ export function ProductImageUpload({
     e.stopPropagation();
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
 
-    const droppedFiles = e.dataTransfer.files;
-    handleFiles(droppedFiles);
-  }, [handleFiles]);
+      const droppedFiles = e.dataTransfer.files;
+      handleFiles(droppedFiles);
+    },
+    [handleFiles],
+  );
 
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFiles(e.target.files);
-  }, [handleFiles]);
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleFiles(e.target.files);
+    },
+    [handleFiles],
+  );
 
   const removeFile = useCallback((index: number) => {
     setFiles((prev) => {
@@ -151,7 +161,12 @@ export function ProductImageUpload({
 
       // Show any partial errors
       if (data.errors && data.errors.length > 0) {
-        const errorMessages = data.errors.map((e: any) => `${e.fileName}: ${e.error}`).join("\n");
+        const errorMessages = data.errors
+          .map(
+            (e: { fileName: string; error: string }) =>
+              `${e.fileName}: ${e.error}`,
+          )
+          .join("\n");
         setUploadError(`Some images failed:\n${errorMessages}`);
       }
 
@@ -164,7 +179,9 @@ export function ProductImageUpload({
       onUploadSuccess();
     } catch (error) {
       console.error("Upload error:", error);
-      setUploadError(error instanceof Error ? error.message : "Failed to upload images");
+      setUploadError(
+        error instanceof Error ? error.message : "Failed to upload images",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -188,7 +205,7 @@ export function ProductImageUpload({
               "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
               isDragging && "border-primary bg-primary/5",
               disabled && "opacity-50 cursor-not-allowed",
-              !disabled && "cursor-pointer hover:border-primary/50"
+              !disabled && "cursor-pointer hover:border-primary/50",
             )}
             onClick={disabled ? undefined : openFilePicker}
           >
@@ -245,8 +262,10 @@ export function ProductImageUpload({
             {/* Error Message */}
             {uploadError && (
               <div className="flex gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-destructive whitespace-pre-line">{uploadError}</p>
+                <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive whitespace-pre-line">
+                  {uploadError}
+                </p>
               </div>
             )}
 
@@ -255,10 +274,13 @@ export function ProductImageUpload({
               {files.map((fileObj, index) => (
                 <div key={index} className="relative group">
                   <div className="aspect-square rounded-lg overflow-hidden border bg-muted">
-                    <img
+                    <Image
                       src={fileObj.preview}
                       alt={fileObj.file.name}
                       className="w-full h-full object-cover"
+                      width={300}
+                      height={300}
+                      unoptimized
                     />
                   </div>
 
@@ -280,7 +302,9 @@ export function ProductImageUpload({
                       {(fileObj.file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                     {fileObj.error && (
-                      <p className="text-xs text-destructive mt-1">{fileObj.error}</p>
+                      <p className="text-xs text-destructive mt-1">
+                        {fileObj.error}
+                      </p>
                     )}
                   </div>
                 </div>

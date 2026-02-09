@@ -3,22 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  basePrice: number;
-  stock: number | null;
-  hasVariant: boolean;
-  status: "draft" | "active" | "archived";
-  variantCount: number;
-  categoryCount: number;
-  totalStock: number;
-}
+import type { ProductListItem } from "@/lib/types";
 
 interface ProductListProps {
-  products: Product[];
+  products: ProductListItem[];
 }
 
 function getStatusBadge(status: string) {

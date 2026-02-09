@@ -164,7 +164,7 @@ export function CarouselImageUpload({
           {preview ? (
             // Image Preview
             <div className="relative group">
-              <div className="relative aspect-[21/9] w-full overflow-hidden rounded-lg border bg-muted">
+              <div className="relative aspect-21/9 w-full overflow-hidden rounded-lg border bg-muted">
                 <Image
                   src={preview}
                   alt="Carousel preview"
@@ -203,7 +203,7 @@ export function CarouselImageUpload({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               className={cn(
-                "aspect-[21/9] border-2 border-dashed rounded-lg p-8 text-center transition-colors flex flex-col items-center justify-center",
+                "aspect-21/9 border-2 border-dashed rounded-lg p-8 text-center transition-colors flex flex-col items-center justify-center",
                 isDragging && "border-primary bg-primary/5",
                 disabled && "opacity-50 cursor-not-allowed",
                 !disabled && "cursor-pointer hover:border-primary/50",

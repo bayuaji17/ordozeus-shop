@@ -24,16 +24,13 @@ import { useState } from "react";
 import { deleteProduct, toggleProductStatus } from "@/lib/actions/products";
 import { useRouter } from "next/navigation";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
+import type { ProductHeaderInfo, ProductStatus } from "@/lib/types";
 
 interface ProductDetailHeaderProps {
-  product: {
-    id: string;
-    name: string;
-    status: "draft" | "active" | "archived";
-  };
+  product: ProductHeaderInfo;
 }
 
-function getStatusBadge(status: string) {
+function getStatusBadge(status: ProductStatus) {
   switch (status) {
     case "active":
       return <Badge variant="default">Active</Badge>;
@@ -65,9 +62,7 @@ export function ProductDetailHeader({ product }: ProductDetailHeaderProps) {
     }
   };
 
-  const handleStatusChange = async (
-    status: "draft" | "active" | "archived",
-  ) => {
+  const handleStatusChange = async (status: ProductStatus) => {
     setIsUpdatingStatus(true);
     const result = await toggleProductStatus(product.id, status);
 

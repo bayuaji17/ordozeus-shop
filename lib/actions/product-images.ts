@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { productImages, products } from "@/lib/db/schema";
+import { productImages } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {

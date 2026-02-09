@@ -3,32 +3,20 @@
 import { useState, useEffect } from "react";
 import { ProductImageCard } from "./product-image-card";
 import { ProductImageUpload } from "./product-image-upload";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { setPrimaryImage, updateImageAltText, deleteProductImage } from "@/lib/actions/product-images";
+import {
+  setPrimaryImage,
+  updateImageAltText,
+  deleteProductImage,
+} from "@/lib/actions/product-images";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-
-interface ProductImage {
-  id: string;
-  productId: string;
-  url: string;
-  key: string;
-  fileName: string;
-  fileSize: number;
-  mimeType: string;
-  width: number | null;
-  height: number | null;
-  altText: string | null;
-  displayOrder: number;
-  isPrimary: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { ProductImageFull } from "@/lib/types";
 
 interface ProductImagesGalleryProps {
   productId: string;
-  initialImages: ProductImage[];
+  initialImages: ProductImageFull[];
 }
 
 export function ProductImagesGallery({
@@ -36,7 +24,7 @@ export function ProductImagesGallery({
   initialImages,
 }: ProductImagesGalleryProps) {
   const router = useRouter();
-  const [images, setImages] = useState<ProductImage[]>(initialImages);
+  const [images, setImages] = useState<ProductImageFull[]>(initialImages);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Update images when initialImages changes
@@ -55,14 +43,14 @@ export function ProductImagesGallery({
           prev.map((img) => ({
             ...img,
             isPrimary: img.id === imageId,
-          }))
+          })),
         );
         router.refresh();
         toast.success("Primary image updated");
       } else {
         toast.error(result.error || "Failed to set primary image");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while updating the primary image");
     } finally {
       setIsProcessing(false);
@@ -82,7 +70,7 @@ export function ProductImagesGallery({
       } else {
         toast.error(result.error || "Failed to delete image");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while deleting the image");
     } finally {
       setIsProcessing(false);
@@ -96,16 +84,14 @@ export function ProductImagesGallery({
       if (result.success) {
         // Optimistic update
         setImages((prev) =>
-          prev.map((img) =>
-            img.id === imageId ? { ...img, altText } : img
-          )
+          prev.map((img) => (img.id === imageId ? { ...img, altText } : img)),
         );
         router.refresh();
         toast.success("Alt text updated");
       } else {
         toast.error(result.error || "Failed to update alt text");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while updating alt text");
     }
   };
@@ -118,9 +104,7 @@ export function ProductImagesGallery({
   return (
     <Tabs defaultValue="gallery" className="w-full">
       <TabsList className="grid w-full max-w-md grid-cols-2">
-        <TabsTrigger value="gallery">
-          Gallery ({images.length})
-        </TabsTrigger>
+        <TabsTrigger value="gallery">Gallery ({images.length})</TabsTrigger>
         <TabsTrigger value="upload">Upload Images</TabsTrigger>
       </TabsList>
 

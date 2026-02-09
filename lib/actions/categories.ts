@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { categories, productCategories } from "@/lib/db/schema";
-import { eq, sql, asc, desc, like, or } from "drizzle-orm";
+import { eq, sql, asc, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   categorySchema,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -29,58 +29,22 @@ import {
   ProductOptionsBuilder,
   type ProductOptionData,
 } from "./product-options-builder";
-import {
-  VariantPreviewTable,
-  type VariantPreviewData,
-} from "./variant-preview-table";
+import { VariantPreviewTable } from "./variant-preview-table";
 import { productSchema, type ProductFormData } from "@/lib/validations/product";
 import { createProduct, updateProduct } from "@/lib/actions/products";
 import { generateSlug } from "@/lib/utils/slug";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { Loader2 } from "lucide-react";
-
-interface Category {
-  id: string;
-  name: string;
-  type: "man" | "woman" | "unisex";
-}
-
-interface ProductOptionValue {
-  id: string;
-  value: string;
-}
-
-interface ProductOption {
-  id: string;
-  name: string;
-  values: ProductOptionValue[];
-}
-
-interface ProductCategory {
-  category: {
-    id: string;
-    name: string;
-    type: "man" | "woman" | "unisex";
-  };
-}
-
-interface ExistingProduct {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  basePrice: number;
-  status: "draft" | "active" | "archived";
-  hasVariant: boolean;
-  stock: number | null;
-  options?: ProductOption[];
-  productCategories?: ProductCategory[];
-}
+import type {
+  CategoryOption,
+  ProductFormProduct,
+  VariantPreviewData,
+} from "@/lib/types";
 
 interface ProductFormProps {
   mode: "create" | "edit";
-  product?: ExistingProduct;
-  categories: Category[];
+  product?: ProductFormProduct;
+  categories: CategoryOption[];
 }
 
 // Form value types that match the discriminated union schema
@@ -146,7 +110,9 @@ function generateSKU(slug: string, values: string[], index: number): string {
 export function ProductForm({ mode, product, categories }: ProductFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(
+    mode === "edit",
+  );
   const [hasVariant, setHasVariant] = useState(product?.hasVariant ?? false);
   const [options, setOptions] = useState<ProductOptionData[]>(
     product?.options?.map((opt) => ({
@@ -158,6 +124,7 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     product?.productCategories?.map((pc) => pc.category.id) ?? [],
   );
+  const [variants, setVariants] = useState<VariantPreviewData[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(productSchema),
@@ -180,119 +147,158 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
   const watchSlug = form.watch("slug");
   const watchBasePrice = form.watch("basePrice");
 
-  // Reset slug auto-generation behavior when form mode/product changes
+  // Auto-generate slug from name (only in create mode and until manually edited)
   useEffect(() => {
-    setIsSlugManuallyEdited(false);
-  }, [mode, product?.id]);
-
-  // Auto-generate slug from name (until slug is manually edited)
-  useEffect(() => {
-    if (watchName && !isSlugManuallyEdited) {
+    if (mode === "create" && watchName && !isSlugManuallyEdited) {
       form.setValue("slug", generateSlug(watchName));
     }
-  }, [watchName, isSlugManuallyEdited, form]);
+  }, [watchName, isSlugManuallyEdited, form, mode]);
 
-  // Generate variants when options change
-  const generatedVariants = useMemo(() => {
-    if (!hasVariant || options.length === 0) return [];
+  // Generate variants from options - memoized for performance
+  const generateVariantsFromOptions = useCallback(
+    (opts: ProductOptionData[], slug: string, basePrice: number) => {
+      if (opts.length === 0) return [];
 
-    // Filter out empty values
-    const validOptions = options
-      .filter((opt) => opt.name.trim())
-      .map((opt) => ({
-        ...opt,
-        values: opt.values.filter((v) => v.value.trim()),
-      }))
-      .filter((opt) => opt.values.length >= 2);
+      // Filter out incomplete options
+      const validOptions = opts
+        .filter((opt) => opt.name.trim())
+        .map((opt) => ({
+          ...opt,
+          values: opt.values.filter((v) => v.value.trim()),
+        }))
+        .filter((opt) => opt.values.length >= 2);
 
-    if (validOptions.length === 0) return [];
+      if (validOptions.length === 0) return [];
 
-    // Generate combinations
-    const valueArrays = validOptions.map((opt) => opt.values);
-    const combinations = cartesianProduct(valueArrays);
+      // Generate cartesian product of all option values
+      const valueArrays = validOptions.map((opt) => opt.values);
+      const combinations = cartesianProduct(valueArrays);
 
-    // Create variant data
-    return combinations.map((combo, index) => {
-      const combinationText = combo
-        .map((val, idx) => `${validOptions[idx].name}: ${val.value}`)
-        .join(" • ");
+      return combinations.map((combo, index) => {
+        const combinationText = combo
+          .map((val, idx) => `${validOptions[idx].name}: ${val.value}`)
+          .join(" • ");
 
-      return {
-        sku: generateSKU(
-          watchSlug || "product",
-          combo.map((v) => v.value),
-          index,
-        ),
-        price: watchBasePrice || 0,
-        stock: 0,
-        optionValueIds: combo.map((v) => v.id || ""),
-        combination: combinationText,
-        isActive: true,
-      };
-    });
-  }, [hasVariant, options, watchSlug, watchBasePrice]);
+        return {
+          sku: generateSKU(
+            slug || "product",
+            combo.map((v) => v.value),
+            index,
+          ),
+          price: basePrice || 0,
+          stock: 0,
+          optionValueIds: combo.map((v) => v.id || ""),
+          combination: combinationText,
+          isActive: true,
+        };
+      });
+    },
+    [],
+  );
 
-  const [variants, setVariants] = useState<VariantPreviewData[]>([]);
+  // Handle options change - sync to form and regenerate variants
+  const handleOptionsChange = useCallback(
+    (newOptions: ProductOptionData[]) => {
+      setOptions(newOptions);
 
-  // Update variants when generated variants change
-  useEffect(() => {
-    setVariants(generatedVariants);
-  }, [generatedVariants]);
+      // Sync options to form for validation
+      const formOptions = newOptions.map((opt) => ({
+        id: opt.id,
+        name: opt.name,
+        values: opt.values.map((v) => ({ id: v.id, value: v.value })),
+      }));
+      form.setValue("options", formOptions, { shouldValidate: true });
 
-  const handleVariantChange = (
-    index: number,
-    field: keyof VariantPreviewData,
-    value: string | number | boolean,
-  ) => {
-    const updated = [...variants];
-    updated[index] = { ...updated[index], [field]: value };
-    setVariants(updated);
-  };
+      // Regenerate variants when options change
+      const newVariants = generateVariantsFromOptions(
+        newOptions,
+        watchSlug,
+        watchBasePrice,
+      );
+      setVariants(newVariants);
 
-  const toggleCategory = (categoryId: string) => {
+      // Sync variants to form
+      const formVariants = newVariants.map((v) => ({
+        sku: v.sku,
+        price: v.price,
+        stock: v.stock,
+        optionValueIds: v.optionValueIds,
+        isActive: v.isActive ?? true,
+      }));
+      form.setValue("variants", formVariants, { shouldValidate: true });
+    },
+    [form, generateVariantsFromOptions, watchSlug, watchBasePrice],
+  );
+
+  // Handle individual variant field changes
+  const handleVariantChange = useCallback(
+    (
+      index: number,
+      field: keyof VariantPreviewData,
+      value: string | number | boolean,
+    ) => {
+      const updated = [...variants];
+      updated[index] = { ...updated[index], [field]: value };
+      setVariants(updated);
+
+      // Sync to form for validation
+      const formVariants = updated.map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        price: v.price,
+        stock: v.stock,
+        optionValueIds: v.optionValueIds,
+        isActive: v.isActive ?? true,
+      }));
+      form.setValue("variants", formVariants, { shouldValidate: true });
+    },
+    [form, variants],
+  );
+
+  // Handle category toggle
+  const toggleCategory = useCallback((categoryId: string) => {
     setSelectedCategories((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
         : [...prev, categoryId],
     );
-  };
+  }, []);
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
-
     try {
       // Create formData based on discriminated union
       const formData: ProductFormData = hasVariant
         ? {
-            name: data.name,
-            slug: data.slug,
-            description: data.description,
-            basePrice: parseInt(String(data.basePrice)),
-            status: data.status ?? "draft",
-            hasVariant: true,
-            categoryIds: selectedCategories,
-            options: options.map((opt) => ({
-              name: opt.name,
-              values: opt.values.map((v) => ({ value: v.value })),
-            })),
-            variants: variants.map((v) => ({
-              sku: v.sku,
-              price: v.price,
-              stock: v.stock,
-              optionValueIds: v.optionValueIds,
-              isActive: v.isActive,
-            })),
-          }
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          basePrice: Number(data.basePrice),
+          status: data.status ?? "draft",
+          hasVariant: true,
+          categoryIds: selectedCategories,
+          options: options.map((opt) => ({
+            name: opt.name,
+            values: opt.values.map((v) => ({ value: v.value })),
+          })),
+          variants: variants.map((v) => ({
+            sku: v.sku,
+            price: Number(v.price),
+            stock: Number(v.stock),
+            optionValueIds: v.optionValueIds,
+            isActive: v.isActive,
+          })),
+        }
         : {
-            name: data.name,
-            slug: data.slug,
-            description: data.description,
-            basePrice: parseInt(String(data.basePrice)),
-            status: data.status ?? "draft",
-            hasVariant: false,
-            categoryIds: selectedCategories,
-            stock: "stock" in data ? parseInt(String(data.stock)) : 0,
-          };
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          basePrice: Number(data.basePrice),
+          status: data.status ?? "draft",
+          hasVariant: false,
+          categoryIds: selectedCategories,
+          stock: "stock" in data ? Number(data.stock) : 0,
+        };
 
       const result =
         mode === "create"
@@ -326,7 +332,7 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
       acc[cat.type].push(cat);
       return acc;
     },
-    {} as Record<string, Category[]>,
+    {} as Record<string, CategoryOption[]>,
   );
 
   return (
@@ -430,7 +436,10 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
                       aria-invalid={fieldState.invalid}
                       placeholder="150000"
                       disabled={isSubmitting}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      field.onChange(isNaN(value) ? 0 : value);
+                    }}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -564,7 +573,10 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
                     placeholder="100"
                     min="0"
                     disabled={isSubmitting}
-                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      field.onChange(isNaN(value) ? 0 : value);
+                    }}
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
@@ -579,12 +591,20 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
       {/* Variant Product: Options & Variants */}
       {hasVariant && (
         <>
-          <ProductOptionsBuilder options={options} onChange={setOptions} />
-          <VariantPreviewTable
-            variants={variants}
-            basePrice={watchBasePrice || 0}
-            onVariantChange={handleVariantChange}
-          />
+          <div className="space-y-2">
+            <ProductOptionsBuilder
+              options={options}
+              onChange={handleOptionsChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <VariantPreviewTable
+              variants={variants}
+              basePrice={watchBasePrice || 0}
+              onVariantChange={handleVariantChange}
+            />
+          </div>
         </>
       )}
 

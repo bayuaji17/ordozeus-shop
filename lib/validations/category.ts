@@ -17,16 +17,16 @@ export const categorySchema = z.object({
     .max(100, "Slug must be 100 characters or less")
     .regex(
       /^[a-z0-9-]+$/,
-      "Slug must contain only lowercase letters, numbers, and hyphens"
+      "Slug must contain only lowercase letters, numbers, and hyphens",
     ),
   type: z.enum(["man", "woman", "unisex"], {
-    errorMap: () => ({ message: "Please select a valid gender type" }),
+    message: "Please select a valid gender type",
   }),
   isActive: z.boolean(),
 });
 
 export const updateCategorySchema = categorySchema.partial().extend({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 // Type exports

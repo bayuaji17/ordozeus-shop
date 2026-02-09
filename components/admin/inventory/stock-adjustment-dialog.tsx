@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,14 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { stockAdjustmentSchema, type StockAdjustmentFormData } from "@/lib/validations/inventory";
+import { type StockAdjustmentFormData } from "@/lib/validations/inventory";
 import { adjustStock } from "@/lib/actions/inventory";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { useRouter } from "next/navigation";
@@ -48,13 +40,14 @@ export function StockAdjustmentDialog({
 }: StockAdjustmentDialogProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [adjustmentType, setAdjustmentType] = useState<"in" | "out" | "adjust">("in");
+  const [adjustmentType, setAdjustmentType] = useState<"in" | "out" | "adjust">(
+    "in",
+  );
 
   const {
     register,
     handleSubmit,
     watch,
-    setValue,
     reset,
     formState: { errors },
   } = useForm<{
@@ -89,7 +82,10 @@ export function StockAdjustmentDialog({
       const adjustmentData: StockAdjustmentFormData = {
         productId: item.productId,
         variantId: item.variantId,
-        quantity: adjustmentType === "adjust" ? formData.quantity : Math.abs(formData.quantity),
+        quantity:
+          adjustmentType === "adjust"
+            ? formData.quantity
+            : Math.abs(formData.quantity),
         type: adjustmentType,
         reason: formData.reason,
       };
@@ -116,7 +112,7 @@ export function StockAdjustmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-125">
         <DialogHeader>
           <DialogTitle>Adjust Stock</DialogTitle>
           <DialogDescription>
@@ -216,13 +212,15 @@ export function StockAdjustmentDialog({
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Change</p>
-                <p className={`text-xl font-bold ${
-                  calculateNewStock() > currentStock
-                    ? "text-green-600"
-                    : calculateNewStock() < currentStock
-                    ? "text-red-600"
-                    : "text-muted-foreground"
-                }`}>
+                <p
+                  className={`text-xl font-bold ${
+                    calculateNewStock() > currentStock
+                      ? "text-green-600"
+                      : calculateNewStock() < currentStock
+                        ? "text-red-600"
+                        : "text-muted-foreground"
+                  }`}
+                >
                   {calculateNewStock() > currentStock && "+"}
                   {calculateNewStock() - currentStock}
                 </p>
@@ -240,7 +238,9 @@ export function StockAdjustmentDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || quantity === 0}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Apply Adjustment
             </Button>
           </DialogFooter>

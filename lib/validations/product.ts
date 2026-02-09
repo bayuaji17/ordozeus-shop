@@ -9,7 +9,7 @@ import { z } from "zod";
 
 // Product option value schema
 export const productOptionValueSchema = z.object({
-  id: z.string().uuid().optional(), // For updates
+  id: z.uuid().optional(), // For updates
   value: z
     .string()
     .min(1, "Option value is required")
@@ -18,7 +18,7 @@ export const productOptionValueSchema = z.object({
 
 // Product option schema
 export const productOptionSchema = z.object({
-  id: z.string().uuid().optional(), // For updates
+  id: z.uuid().optional(), // For updates
   name: z
     .string()
     .min(1, "Option name is required")
@@ -30,14 +30,15 @@ export const productOptionSchema = z.object({
 
 // Variant preview schema (for pre-generated variants in the form)
 export const variantPreviewSchema = z.object({
-  id: z.string().uuid().optional(), // For updates
+  id: z.uuid().optional(), // For updates
   sku: z
     .string()
     .min(1, "SKU is required")
     .max(100, "SKU must be 100 characters or less"),
   price: z.number().int().positive("Price must be positive"),
   stock: z.number().int().min(0, "Stock cannot be negative"),
-  optionValueIds: z.array(z.string().uuid()),
+  // Allow empty strings for new option values (they get IDs after creation)
+  optionValueIds: z.array(z.string()),
   isActive: z.boolean().default(true),
 });
 
@@ -53,7 +54,7 @@ const baseProductSchema = z.object({
     .max(255, "Slug must be 255 characters or less")
     .regex(
       /^[a-z0-9-]+$/,
-      "Slug must contain only lowercase letters, numbers, and hyphens"
+      "Slug must contain only lowercase letters, numbers, and hyphens",
     ),
   description: z.string().optional(),
   basePrice: z.number().int().positive("Base price must be positive"),
@@ -94,12 +95,14 @@ export type VariantPreview = z.infer<typeof variantPreviewSchema>;
 
 // Update schemas (allow partial updates)
 export const updateSimpleProductSchema = simpleProductSchema.partial().extend({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
-export const updateVariantProductSchema = variantProductSchema.partial().extend({
-  id: z.string().uuid(),
-});
+export const updateVariantProductSchema = variantProductSchema
+  .partial()
+  .extend({
+    id: z.uuid(),
+  });
 
 export const updateProductSchema = z.union([
   updateSimpleProductSchema,

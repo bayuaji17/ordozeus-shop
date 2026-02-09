@@ -61,7 +61,7 @@ export const carouselSchema = z
 
     status: z
       .enum(["active", "inactive", "scheduled"], {
-        error: "Please select a valid status",
+        message: "Please select a valid status",
       })
       .default("inactive"),
 

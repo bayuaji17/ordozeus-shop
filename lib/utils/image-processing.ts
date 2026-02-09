@@ -179,7 +179,7 @@ export async function validateImage(
     }
 
     return { valid: true };
-  } catch (error) {
+  } catch {
     return {
       valid: false,
       error: "Invalid image file or corrupted data",

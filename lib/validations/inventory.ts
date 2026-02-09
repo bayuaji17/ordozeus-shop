@@ -16,7 +16,7 @@ export const stockAdjustmentSchema = z.object({
       message: "Quantity cannot be zero",
     }),
   type: z.enum(["in", "out", "adjust"], {
-    errorMap: () => ({ message: "Please select a valid adjustment type" }),
+    message: "Please select a valid adjustment type",
   }),
   reason: z
     .string()

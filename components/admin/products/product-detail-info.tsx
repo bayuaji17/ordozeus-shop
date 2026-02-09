@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
+import type { ProductStatus, ProductCategoryRelation } from "@/lib/types";
 
 interface ProductDetailInfoProps {
   product: {
@@ -10,16 +11,10 @@ interface ProductDetailInfoProps {
     basePrice: number;
     stock: number | null;
     hasVariant: boolean;
-    status: "draft" | "active" | "archived";
+    status: ProductStatus;
     createdAt: Date;
     updatedAt: Date;
-    productCategories: Array<{
-      category: {
-        id: string;
-        name: string;
-        type: "man" | "woman" | "unisex";
-      };
-    }>;
+    productCategories: ProductCategoryRelation[];
   };
 }
 

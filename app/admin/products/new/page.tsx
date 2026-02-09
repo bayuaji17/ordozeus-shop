@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { getAllCategories } from "@/lib/actions/products";
 import { ProductForm } from "@/components/admin/products/product-form";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 async function NewProductContent() {
   const categories = await getAllCategories();
@@ -32,11 +34,19 @@ function NewProductSkeleton() {
 export default function NewProductPage() {
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Create New Product</h1>
-        <p className="text-muted-foreground mt-1">
-          Add a new product to your inventory
-        </p>
+      <div className="flex flex-col gap-2">
+        <Button asChild className="w-fit">
+          <Link href="/admin/products">
+            <ArrowLeft />
+            Back
+          </Link>
+        </Button>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Create New Product</h1>
+          <p className="text-muted-foreground mt-1">
+            Add a new product to your inventory
+          </p>
+        </div>
       </div>
 
       <Suspense fallback={<NewProductSkeleton />}>

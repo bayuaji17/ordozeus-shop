@@ -5,27 +5,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
-
-export interface VariantPreviewData {
-  id?: string;
-  sku: string;
-  price: number;
-  stock: number;
-  optionValueIds: string[];
-  combination: string; // Display text like "Size: M, Color: Black"
-  isActive: boolean;
-}
+import { FieldError } from "@/components/ui/field";
+import type { VariantPreviewData } from "@/lib/types";
 
 interface VariantPreviewTableProps {
   variants: VariantPreviewData[];
   basePrice: number;
-  onVariantChange: (index: number, field: keyof VariantPreviewData, value: any) => void;
+  onVariantChange: (index: number, field: keyof VariantPreviewData, value: string | number) => void;
+  errors?: Record<number, Record<string, { message?: string }>>;
 }
 
 export function VariantPreviewTable({
   variants,
   basePrice,
   onVariantChange,
+  errors,
 }: VariantPreviewTableProps) {
   if (variants.length === 0) {
     return (
@@ -87,14 +81,19 @@ export function VariantPreviewTable({
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Input
-                        value={variant.sku}
-                        onChange={(e) =>
-                          onVariantChange(index, "sku", e.target.value)
-                        }
-                        className="font-mono text-sm"
-                        placeholder="SKU"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          value={variant.sku}
+                          onChange={(e) =>
+                            onVariantChange(index, "sku", e.target.value)
+                          }
+                          className={`font-mono text-sm ${errors?.[index]?.sku ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                          placeholder="SKU"
+                        />
+                        {errors?.[index]?.sku && (
+                          <FieldError errors={[errors[index].sku]} />
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -105,9 +104,12 @@ export function VariantPreviewTable({
                           onChange={(e) =>
                             onVariantChange(index, "price", parseInt(e.target.value) || 0)
                           }
-                          className="w-32"
+                          className={`w-32 ${errors?.[index]?.price ? "border-destructive focus-visible:ring-destructive" : ""}`}
                         />
                       </div>
+                      {errors?.[index]?.price && (
+                        <FieldError errors={[errors[index].price]} />
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Input
@@ -116,9 +118,12 @@ export function VariantPreviewTable({
                         onChange={(e) =>
                           onVariantChange(index, "stock", parseInt(e.target.value) || 0)
                         }
-                        className="w-24"
+                        className={`w-24 ${errors?.[index]?.stock ? "border-destructive focus-visible:ring-destructive" : ""}`}
                         min="0"
                       />
+                      {errors?.[index]?.stock && (
+                        <FieldError errors={[errors[index].stock]} />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -146,8 +151,11 @@ export function VariantPreviewTable({
                     onChange={(e) =>
                       onVariantChange(index, "sku", e.target.value)
                     }
-                    className="font-mono text-sm mt-1"
+                    className={`font-mono text-sm mt-1 ${errors?.[index]?.sku ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   />
+                  {errors?.[index]?.sku && (
+                    <FieldError errors={[errors[index].sku]} />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -178,8 +186,11 @@ export function VariantPreviewTable({
                         onVariantChange(index, "stock", parseInt(e.target.value) || 0)
                       }
                       min="0"
-                      className="mt-1"
+                      className={`mt-1 ${errors?.[index]?.stock ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     />
+                    {errors?.[index]?.stock && (
+                      <FieldError errors={[errors[index].stock]} />
+                    )}
                   </div>
                 </div>
               </div>
@@ -200,3 +211,6 @@ export function VariantPreviewTable({
     </Card>
   );
 }
+
+// Re-export the type for backwards compatibility
+export type { VariantPreviewData };

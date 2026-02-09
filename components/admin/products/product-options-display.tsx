@@ -1,14 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface ProductOption {
-  id: string;
-  name: string;
-  values: Array<{
-    id: string;
-    value: string;
-  }>;
-}
+import type { ProductOption } from "@/lib/types";
 
 interface ProductOptionsDisplayProps {
   options: ProductOption[];

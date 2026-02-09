@@ -1,27 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
-
-interface Variant {
-  id: string;
-  sku: string;
-  price: number;
-  stock: number;
-  isActive: boolean;
-  variantValues: Array<{
-    optionValue: {
-      id: string;
-      value: string;
-      option: {
-        id: string;
-        name: string;
-      };
-    };
-  }>;
-}
+import type { ProductVariant } from "@/lib/types";
 
 interface ProductVariantsTableProps {
-  variants: Variant[];
+  variants: ProductVariant[];
 }
 
 function getStockBadge(stock: number) {
@@ -51,7 +34,7 @@ export function ProductVariantsTable({ variants }: ProductVariantsTableProps) {
   }
 
   // Group variant values by option name for display
-  const getVariantCombination = (variant: Variant) => {
+  const getVariantCombination = (variant: ProductVariant) => {
     return variant.variantValues
       .map((vv) => `${vv.optionValue.option.name}: ${vv.optionValue.value}`)
       .join(" • ");

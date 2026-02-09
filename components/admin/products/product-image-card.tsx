@@ -17,17 +17,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { ProductImageCardData } from "@/lib/types";
 
 interface ProductImageCardProps {
-  image: {
-    id: string;
-    url: string;
-    fileName: string;
-    altText: string | null;
-    isPrimary: boolean;
-    width: number | null;
-    height: number | null;
-  };
+  image: ProductImageCardData;
   onSetPrimary: (imageId: string) => Promise<void>;
   onDelete: (imageId: string) => Promise<void>;
   onUpdateAltText: (imageId: string, altText: string) => Promise<void>;

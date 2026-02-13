@@ -20,8 +20,9 @@ export function InventoryFilters() {
   const [isPending, startTransition] = useTransition();
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
-  const [stockLevel, setStockLevel] = useState(searchParams.get("stockLevel") ?? "all");
-  const [productType, setProductType] = useState(searchParams.get("productType") ?? "all");
+  const [stockLevel, setStockLevel] = useState(
+    searchParams.get("stockLevel") ?? "all",
+  );
 
   const updateFilters = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -32,7 +33,6 @@ export function InventoryFilters() {
       params.delete(key);
     }
 
-    // Reset to page 1 when filters change
     params.delete("page");
 
     startTransition(() => {
@@ -52,13 +52,12 @@ export function InventoryFilters() {
 
   const hasActiveFilters =
     searchParams.get("search") ||
-    (searchParams.get("stockLevel") && searchParams.get("stockLevel") !== "all") ||
-    (searchParams.get("productType") && searchParams.get("productType") !== "all");
+    (searchParams.get("stockLevel") &&
+      searchParams.get("stockLevel") !== "all");
 
   const clearAllFilters = () => {
     setSearch("");
     setStockLevel("all");
-    setProductType("all");
     startTransition(() => {
       router.push("/admin/inventory");
     });
@@ -70,7 +69,7 @@ export function InventoryFilters() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search products, variants, or SKU..."
+            placeholder="Search products, sizes, or SKU..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-9"
@@ -110,28 +109,6 @@ export function InventoryFilters() {
               <SelectItem value="in-stock">In Stock (&gt;10)</SelectItem>
               <SelectItem value="low-stock">Low Stock (1-10)</SelectItem>
               <SelectItem value="out-of-stock">Out of Stock (0)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="product-type-filter" className="text-sm mb-2 block">
-            Product Type
-          </Label>
-          <Select
-            value={productType}
-            onValueChange={(value) => {
-              setProductType(value);
-              updateFilters("productType", value);
-            }}
-          >
-            <SelectTrigger id="product-type-filter">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="simple">Simple Products</SelectItem>
-              <SelectItem value="variant">Variant Products</SelectItem>
             </SelectContent>
           </Select>
         </div>

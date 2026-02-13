@@ -4,13 +4,14 @@ import { Badge } from "@/components/ui/badge";
 interface InventoryMovement {
   id: string;
   productId: string;
-  variantId: string | null;
+  productSizeId: string | null;
   type: "in" | "out" | "adjust";
   quantity: number;
   reason: string | null;
   createdAt: Date;
   productName: string | null;
-  variantSku: string | null;
+  sizeName: string | null;
+  sku: string | null;
 }
 
 interface InventoryHistoryProps {
@@ -20,11 +21,32 @@ interface InventoryHistoryProps {
 function getTypeBadge(type: string) {
   switch (type) {
     case "in":
-      return <Badge variant="default" className="bg-green-500/10 text-green-700 dark:text-green-400">Stock In</Badge>;
+      return (
+        <Badge
+          variant="default"
+          className="bg-green-500/10 text-green-700 dark:text-green-400"
+        >
+          Stock In
+        </Badge>
+      );
     case "out":
-      return <Badge variant="default" className="bg-red-500/10 text-red-700 dark:text-red-400">Stock Out</Badge>;
+      return (
+        <Badge
+          variant="default"
+          className="bg-red-500/10 text-red-700 dark:text-red-400"
+        >
+          Stock Out
+        </Badge>
+      );
     case "adjust":
-      return <Badge variant="default" className="bg-blue-500/10 text-blue-700 dark:text-blue-400">Adjustment</Badge>;
+      return (
+        <Badge
+          variant="default"
+          className="bg-blue-500/10 text-blue-700 dark:text-blue-400"
+        >
+          Adjustment
+        </Badge>
+      );
     default:
       return <Badge variant="outline">{type}</Badge>;
   }
@@ -63,9 +85,9 @@ export function InventoryHistory({ movements }: InventoryHistoryProps) {
                   {getTypeBadge(movement.type)}
                   <span className="text-sm font-medium">
                     {movement.productName}
-                    {movement.variantSku && (
+                    {movement.sizeName && (
                       <span className="text-muted-foreground ml-1">
-                        ({movement.variantSku})
+                        ({movement.sizeName})
                       </span>
                     )}
                   </span>
@@ -73,13 +95,15 @@ export function InventoryHistory({ movements }: InventoryHistoryProps) {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>
                     Quantity:{" "}
-                    <span className={`font-medium ${
-                      movement.type === "in"
-                        ? "text-green-600"
-                        : movement.type === "out"
-                        ? "text-red-600"
-                        : "text-blue-600"
-                    }`}>
+                    <span
+                      className={`font-medium ${
+                        movement.type === "in"
+                          ? "text-green-600"
+                          : movement.type === "out"
+                            ? "text-red-600"
+                            : "text-blue-600"
+                      }`}
+                    >
                       {movement.type === "in" && "+"}
                       {movement.type === "out" && "-"}
                       {movement.quantity}

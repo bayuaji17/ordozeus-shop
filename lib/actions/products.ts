@@ -3,22 +3,15 @@
 import { db } from "@/lib/db";
 import {
   products,
-  productVariants,
+  productSizes,
   productCategories,
   categories,
-  productOptions,
-  productOptionValues,
-  productVariantValues,
   productImages,
   inventoryMovements,
 } from "@/lib/db/schema";
-import { sql, eq, like, or, and, desc, asc, inArray } from "drizzle-orm";
+import { sql, eq, like, or, and, desc, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import {
-  productSchema,
-  type ProductFormData,
-  type VariantProductFormData,
-} from "@/lib/validations/product";
+import { productSchema, type ProductFormData } from "@/lib/validations/product";
 
 export type ProductStatus = "draft" | "active" | "archived";
 export type StockLevel = "all" | "in_stock" | "low_stock" | "out_of_stock";
@@ -48,7 +41,6 @@ export async function getProducts(filters: ProductFilters = {}) {
 
     const offset = (page - 1) * limit;
 
-    // Build the base query
     let query = db
       .select({
         id: products.id,
@@ -56,31 +48,23 @@ export async function getProducts(filters: ProductFilters = {}) {
         slug: products.slug,
         description: products.description,
         basePrice: products.basePrice,
-        stock: products.stock,
-        hasVariant: products.hasVariant,
+        isFeatured: products.isFeatured,
+        displayOrder: products.displayOrder,
         status: products.status,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
-        variantCount: sql<number>`cast(count(distinct ${productVariants.id}) as integer)`,
+        sizeCount: sql<number>`cast(count(distinct ${productSizes.id}) as integer)`,
         categoryCount: sql<number>`cast(count(distinct ${productCategories.categoryId}) as integer)`,
-        totalStock: sql<number>`
-          cast(
-            case
-              when ${products.hasVariant} then coalesce(sum(${productVariants.stock}), 0)
-              else coalesce(${products.stock}, 0)
-            end
-          as integer)
-        `,
+        totalStock: sql<number>`cast(coalesce(sum(${productSizes.stock}), 0) as integer)`,
       })
       .from(products)
-      .leftJoin(productVariants, eq(products.id, productVariants.productId))
+      .leftJoin(productSizes, eq(products.id, productSizes.productId))
       .leftJoin(productCategories, eq(products.id, productCategories.productId))
       .$dynamic();
 
     // Apply filters
     const conditions = [];
 
-    // Search filter
     if (search) {
       conditions.push(
         or(
@@ -91,7 +75,6 @@ export async function getProducts(filters: ProductFilters = {}) {
       );
     }
 
-    // Status filter
     if (status !== "all") {
       conditions.push(eq(products.status, status));
     }
@@ -100,7 +83,6 @@ export async function getProducts(filters: ProductFilters = {}) {
       query = query.where(and(...conditions));
     }
 
-    // Group by and order
     query = query.groupBy(products.id);
 
     // Sorting
@@ -122,7 +104,6 @@ export async function getProducts(filters: ProductFilters = {}) {
       );
     }
 
-    // Execute query with pagination
     const result = await query.limit(limit).offset(offset);
 
     // Get total count for pagination
@@ -135,7 +116,7 @@ export async function getProducts(filters: ProductFilters = {}) {
 
     const totalCount = totalCountResult[0]?.count || 0;
 
-    // Apply stock level filter in memory (since it depends on aggregated totalStock)
+    // Apply stock level filter in memory (depends on aggregated totalStock)
     let filteredResult = result;
     if (stockLevel !== "all") {
       filteredResult = result.filter((product) => {
@@ -178,30 +159,11 @@ export async function getProductById(id: string) {
             desc(images.createdAt),
           ],
         },
-      },
-    });
-
-    if (!product) {
-      return null;
-    }
-
-    // Get product options and their values
-    const productOptions = await db.query.productOptions.findMany({
-      where: eq(products.id, id),
-      with: {
-        values: true,
-      },
-    });
-
-    // Get product variants with their option values
-    const variants = await db.query.productVariants.findMany({
-      where: eq(productVariants.productId, id),
-      with: {
-        variantValues: {
+        sizes: {
           with: {
-            optionValue: {
+            size: {
               with: {
-                option: true,
+                sizeType: true,
               },
             },
           },
@@ -209,10 +171,12 @@ export async function getProductById(id: string) {
       },
     });
 
+    if (!product) {
+      return null;
+    }
+
     return {
       ...product,
-      options: productOptions,
-      variants,
       images: product.productImages,
     };
   } catch (error) {
@@ -228,7 +192,8 @@ export async function getAllCategories() {
         id: categories.id,
         name: categories.name,
         slug: categories.slug,
-        type: categories.type,
+        parentId: categories.parentId,
+        level: categories.level,
         isActive: categories.isActive,
         productCount: sql<number>`cast(count(${productCategories.productId}) as integer)`,
       })
@@ -238,7 +203,7 @@ export async function getAllCategories() {
         eq(categories.id, productCategories.categoryId),
       )
       .groupBy(categories.id)
-      .orderBy(asc(categories.name));
+      .orderBy(asc(categories.displayOrder), asc(categories.name));
 
     return allCategories;
   } catch (error) {
@@ -252,39 +217,23 @@ export async function getAllCategories() {
 // ============================================================================
 
 /**
- * Helper function to generate SKU for a variant
+ * Helper function to generate SKU for a product size
  */
-function generateVariantSKU(
+function generateSizeSKU(
   productSlug: string,
-  optionValues: string[],
+  sizeName: string,
   index: number,
 ): string {
-  const initials = optionValues
-    .map((val) => val.substring(0, 2).toUpperCase())
-    .join("");
+  const sizeInitials = sizeName.substring(0, 3).toUpperCase();
   const paddedIndex = String(index + 1).padStart(3, "0");
-  return `${productSlug}-${initials}-${paddedIndex}`;
+  return `${productSlug}-${sizeInitials}-${paddedIndex}`;
 }
 
 /**
- * Helper function to generate cartesian product of option values
- */
-function cartesianProduct<T>(arrays: T[][]): T[][] {
-  if (arrays.length === 0) return [[]];
-  if (arrays.length === 1) return arrays[0].map((item) => [item]);
-
-  const [first, ...rest] = arrays;
-  const restProduct = cartesianProduct(rest);
-
-  return first.flatMap((item) => restProduct.map((prod) => [item, ...prod]));
-}
-
-/**
- * Create a new product (simple or with variants)
+ * Create a new product with sizes
  */
 export async function createProduct(data: ProductFormData) {
   try {
-    // Validate input
     const validatedData = productSchema.parse(data);
 
     // Check if slug already exists
@@ -299,7 +248,6 @@ export async function createProduct(data: ProductFormData) {
       };
     }
 
-    // Use transaction for complex operations
     const result = await db.transaction(async (tx) => {
       // Insert product
       const [product] = await tx
@@ -309,9 +257,9 @@ export async function createProduct(data: ProductFormData) {
           slug: validatedData.slug,
           description: validatedData.description,
           basePrice: validatedData.basePrice,
-          hasVariant: validatedData.hasVariant,
           status: validatedData.status,
-          stock: validatedData.hasVariant ? null : validatedData.stock,
+          isFeatured: validatedData.isFeatured,
+          displayOrder: validatedData.displayOrder,
         })
         .returning();
 
@@ -325,87 +273,29 @@ export async function createProduct(data: ProductFormData) {
         );
       }
 
-      // Handle variant products
-      if (validatedData.hasVariant) {
-        const variantData = validatedData as VariantProductFormData;
-
-        // Insert options and their values
-        for (const option of variantData.options) {
-          const [insertedOption] = await tx
-            .insert(productOptions)
-            .values({
-              productId: product.id,
-              name: option.name,
-            })
-            .returning();
-
-          // Insert option values
-          for (const value of option.values) {
-            await tx.insert(productOptionValues).values({
-              optionId: insertedOption.id,
-              value: value.value,
-            });
-          }
-        }
-
-        // Get all option values for variant generation
-        const allOptions = await tx.query.productOptions.findMany({
-          where: eq(productOptions.productId, product.id),
-          with: {
-            values: true,
-          },
+      // Insert product sizes
+      if (validatedData.sizes.length > 0) {
+        // Look up size names for SKU generation
+        const sizeIds = validatedData.sizes.map((s) => s.sizeId);
+        const sizeRecords = await tx.query.sizes.findMany({
+          where: (s, { inArray }) => inArray(s.id, sizeIds),
         });
+        const sizeNameMap = new Map(sizeRecords.map((s) => [s.id, s.name]));
 
-        // Generate variants using cartesian product
-        const optionValueArrays = allOptions.map((opt) => opt.values);
-        const combinations = cartesianProduct(optionValueArrays);
-
-        // Create a map of option value combinations to form variant data
-        // This allows us to match generated combinations with user-entered stock/price
-        const formVariantsMap = new Map<string, { price: number; stock: number; isActive?: boolean }>();
-        for (const formVariant of variantData.variants) {
-          // Use SKU as key since it's unique per combination
-          formVariantsMap.set(formVariant.sku, {
-            price: formVariant.price,
-            stock: formVariant.stock,
-            isActive: formVariant.isActive,
-          });
-        }
-
-        // Insert variants
-        for (let i = 0; i < combinations.length; i++) {
-          const combination = combinations[i];
-          const sku = generateVariantSKU(
-            product.slug,
-            combination.map((v) => v.value),
-            i,
-          );
-
-          // Get user-entered values or use defaults
-          const formVariant = formVariantsMap.get(sku);
-          const variantPrice = formVariant?.price ?? product.basePrice;
-          const variantStock = formVariant?.stock ?? 0;
-          const variantIsActive = formVariant?.isActive ?? true;
-
-          const [variant] = await tx
-            .insert(productVariants)
-            .values({
-              productId: product.id,
-              sku,
-              price: variantPrice,
-              stock: variantStock,
-              isActive: variantIsActive,
-            })
-            .returning();
-
-          // Link variant to option values
-          for (const optionValue of combination) {
-            await tx.insert(productVariantValues).values({
-              variantId: variant.id,
-              optionValueId: optionValue.id,
-            });
-          }
-        }
+        await tx.insert(productSizes).values(
+          validatedData.sizes.map((size, index) => ({
+            productId: product.id,
+            sizeId: size.sizeId,
+            sku:
+              size.sku ||
+              generateSizeSKU(
+                product.slug,
+                sizeNameMap.get(size.sizeId) || "UNK",
+                index,
+              ),
+            stock: size.stock,
+          })),
+        );
       }
 
       return product;
@@ -439,10 +329,8 @@ export async function createProduct(data: ProductFormData) {
  */
 export async function updateProduct(id: string, data: ProductFormData) {
   try {
-    // Validate input
     const validatedData = productSchema.parse(data);
 
-    // Check if product exists
     const existingProduct = await db.query.products.findFirst({
       where: eq(products.id, id),
     });
@@ -454,7 +342,7 @@ export async function updateProduct(id: string, data: ProductFormData) {
       };
     }
 
-    // Check if slug is being changed and if it conflicts
+    // Check slug conflict
     if (validatedData.slug !== existingProduct.slug) {
       const slugConflict = await db.query.products.findFirst({
         where: eq(products.slug, validatedData.slug),
@@ -468,7 +356,6 @@ export async function updateProduct(id: string, data: ProductFormData) {
       }
     }
 
-    // Use transaction for complex operations
     await db.transaction(async (tx) => {
       // Update product base fields
       await tx
@@ -479,7 +366,8 @@ export async function updateProduct(id: string, data: ProductFormData) {
           description: validatedData.description,
           basePrice: validatedData.basePrice,
           status: validatedData.status,
-          stock: validatedData.hasVariant ? null : validatedData.stock,
+          isFeatured: validatedData.isFeatured,
+          displayOrder: validatedData.displayOrder,
           updatedAt: new Date(),
         })
         .where(eq(products.id, id));
@@ -498,9 +386,31 @@ export async function updateProduct(id: string, data: ProductFormData) {
         );
       }
 
-      // For variant products, this is complex - for now, simple update
-      // Full variant sync would require comparing existing vs new options/values
-      // and adding/removing variants accordingly
+      // Sync product sizes: delete old, insert new
+      await tx.delete(productSizes).where(eq(productSizes.productId, id));
+
+      if (validatedData.sizes.length > 0) {
+        const sizeIds = validatedData.sizes.map((s) => s.sizeId);
+        const sizeRecords = await tx.query.sizes.findMany({
+          where: (s, { inArray }) => inArray(s.id, sizeIds),
+        });
+        const sizeNameMap = new Map(sizeRecords.map((s) => [s.id, s.name]));
+
+        await tx.insert(productSizes).values(
+          validatedData.sizes.map((size, index) => ({
+            productId: id,
+            sizeId: size.sizeId,
+            sku:
+              size.sku ||
+              generateSizeSKU(
+                validatedData.slug,
+                sizeNameMap.get(size.sizeId) || "UNK",
+                index,
+              ),
+            stock: size.stock,
+          })),
+        );
+      }
     });
 
     revalidatePath("/admin/products");
@@ -543,7 +453,7 @@ export async function deleteProduct(id: string) {
       };
     }
 
-    // Collect image keys for R2 cleanup after DB deletion
+    // Collect image keys for R2 cleanup
     const images = await db.query.productImages.findMany({
       where: eq(productImages.productId, id),
       columns: {
@@ -553,7 +463,7 @@ export async function deleteProduct(id: string) {
     const imageKeys = images.map((image) => image.key);
 
     await db.transaction(async (tx) => {
-      // Remove inventory records first (references product and variants)
+      // Remove inventory records
       await tx
         .delete(inventoryMovements)
         .where(eq(inventoryMovements.productId, id));
@@ -563,45 +473,14 @@ export async function deleteProduct(id: string) {
         .delete(productCategories)
         .where(eq(productCategories.productId, id));
 
-      // Remove variant values and variants for this product
-      const variants = await tx.query.productVariants.findMany({
-        where: eq(productVariants.productId, id),
-        columns: {
-          id: true,
-        },
-      });
-      const variantIds = variants.map((variant) => variant.id);
+      // Remove product sizes (cascades from product delete too, but explicit is clearer)
+      await tx.delete(productSizes).where(eq(productSizes.productId, id));
 
-      if (variantIds.length > 0) {
-        await tx
-          .delete(productVariantValues)
-          .where(inArray(productVariantValues.variantId, variantIds));
-      }
-
-      await tx.delete(productVariants).where(eq(productVariants.productId, id));
-
-      // Remove option values and options for this product
-      const options = await tx.query.productOptions.findMany({
-        where: eq(productOptions.productId, id),
-        columns: {
-          id: true,
-        },
-      });
-      const optionIds = options.map((option) => option.id);
-
-      if (optionIds.length > 0) {
-        await tx
-          .delete(productOptionValues)
-          .where(inArray(productOptionValues.optionId, optionIds));
-      }
-
-      await tx.delete(productOptions).where(eq(productOptions.productId, id));
-
-      // Finally delete the product (product_images rows cascade-delete)
+      // Delete the product (productImages cascade-delete)
       await tx.delete(products).where(eq(products.id, id));
     });
 
-    // Delete images from R2 storage after successful DB delete
+    // Delete images from R2 storage
     if (imageKeys.length > 0) {
       try {
         const { deleteManyFromR2 } = await import("@/lib/r2");

@@ -1,8 +1,14 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { getProducts } from "@/lib/actions/products";
 import { ProductFilters } from "@/components/admin/products/product-filters";
 import { ProductList } from "@/components/admin/products/product-list";
-import { ProductPagination } from "@/components/admin/products/product-pagination";
+import { Pagination } from "@/components/admin/pagination";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -24,7 +30,7 @@ function ProductsLoading() {
   return (
     <div className="space-y-4">
       <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-[400px] w-full" />
+      <Skeleton className="h-100 w-full" />
     </div>
   );
 }
@@ -40,7 +46,7 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
     sortBy: params.sortBy || "created",
     sortOrder: params.sortOrder || "desc",
     page,
-    limit: 20,
+    limit: 10,
   });
 
   return (
@@ -49,7 +55,8 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
         <CardHeader>
           <CardTitle>Product List</CardTitle>
           <CardDescription>
-            {pagination.total} product{pagination.total !== 1 ? 's' : ''} in your store
+            {pagination.total} product{pagination.total !== 1 ? "s" : ""} in
+            your store
           </CardDescription>
           <div className="pt-4">
             <ProductFilters />
@@ -60,24 +67,25 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
         </CardContent>
       </Card>
 
-      <ProductPagination
+      <Pagination
         currentPage={pagination.page}
         totalPages={pagination.totalPages}
         total={pagination.total}
+        basePath="/admin/products"
       />
     </>
   );
 }
 
-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+export default async function ProductsPage({
+  searchParams,
+}: ProductsPageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-          <p className="text-muted-foreground">
-            Manage your product inventory
-          </p>
+          <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
         <Link href="/admin/products/new">
           <Button>

@@ -3,12 +3,12 @@ import { z } from "zod";
 /**
  * Inventory validation schemas
  *
- * Handles stock adjustments and inventory movements.
+ * Handles stock adjustments and inventory movements at the product-size level.
  */
 
 export const stockAdjustmentSchema = z.object({
   productId: z.string().uuid("Invalid product ID"),
-  variantId: z.string().uuid("Invalid variant ID").optional().nullable(),
+  productSizeId: z.string().uuid("Invalid product size ID"),
   quantity: z
     .number()
     .int("Quantity must be a whole number")
@@ -33,13 +33,16 @@ export const bulkStockAdjustmentSchema = z.object({
 // Inventory filter schema
 export const inventoryFilterSchema = z.object({
   search: z.string().optional(),
-  stockLevel: z.enum(["all", "in-stock", "low-stock", "out-of-stock"]).default("all"),
-  productType: z.enum(["all", "simple", "variant"]).default("all"),
+  stockLevel: z
+    .enum(["all", "in-stock", "low-stock", "out-of-stock"])
+    .default("all"),
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().max(100).default(20),
 });
 
 // Type exports
 export type StockAdjustmentFormData = z.infer<typeof stockAdjustmentSchema>;
-export type BulkStockAdjustmentFormData = z.infer<typeof bulkStockAdjustmentSchema>;
+export type BulkStockAdjustmentFormData = z.infer<
+  typeof bulkStockAdjustmentSchema
+>;
 export type InventoryFilterData = z.infer<typeof inventoryFilterSchema>;

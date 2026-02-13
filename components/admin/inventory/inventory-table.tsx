@@ -3,13 +3,13 @@ import { Badge } from "@/components/ui/badge";
 interface InventoryItem {
   id: string;
   productId: string;
-  variantId: string | null;
+  productSizeId: string;
   name: string;
-  sku: string;
-  stock: number | null;
-  hasVariant: boolean;
-  isActive: boolean;
-  type: string;
+  sku: string | null;
+  stock: number;
+  status: string;
+  sizeInfo: string;
+  sizeType: string;
 }
 
 interface InventoryTableProps {
@@ -17,22 +17,26 @@ interface InventoryTableProps {
   onAdjustStock: (item: InventoryItem) => void;
 }
 
-function getStockBadge(stock: number | null) {
-  const stockValue = stock || 0;
-
-  if (stockValue === 0) {
+function getStockBadge(stock: number) {
+  if (stock === 0) {
     return <Badge variant="destructive">Out of Stock</Badge>;
   }
-  if (stockValue <= 10) {
+  if (stock <= 10) {
     return (
-      <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">
-        Low Stock ({stockValue})
+      <Badge
+        variant="secondary"
+        className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+      >
+        Low Stock ({stock})
       </Badge>
     );
   }
   return (
-    <Badge variant="default" className="bg-green-500/10 text-green-700 dark:text-green-400">
-      In Stock ({stockValue})
+    <Badge
+      variant="default"
+      className="bg-green-500/10 text-green-700 dark:text-green-400"
+    >
+      In Stock ({stock})
     </Badge>
   );
 }
@@ -74,13 +78,18 @@ export function InventoryTable({ items, onAdjustStock }: InventoryTableProps) {
             <thead className="bg-muted/50">
               <tr className="border-b">
                 <th className="px-4 py-3 text-left text-sm font-medium">
-                  Product / Variant
+                  Product / Size
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium">SKU</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Stock</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Size
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Stock
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -93,21 +102,14 @@ export function InventoryTable({ items, onAdjustStock }: InventoryTableProps) {
                     <p className="font-medium">{item.name}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="font-mono text-sm">{item.sku}</span>
+                    <span className="font-mono text-sm">
+                      {item.sku ?? "N/A"}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline">
-                      {item.type === "simple" ? "Simple" : "Variant"}
-                    </Badge>
+                    <Badge variant="outline">{item.sizeInfo}</Badge>
                   </td>
                   <td className="px-4 py-3">{getStockBadge(item.stock)}</td>
-                  <td className="px-4 py-3">
-                    {item.isActive ? (
-                      <Badge variant="default">Active</Badge>
-                    ) : (
-                      <Badge variant="outline">Inactive</Badge>
-                    )}
-                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => onAdjustStock(item)}
@@ -131,26 +133,19 @@ export function InventoryTable({ items, onAdjustStock }: InventoryTableProps) {
               <div className="flex-1">
                 <h3 className="font-medium">{item.name}</h3>
                 <p className="text-xs text-muted-foreground font-mono mt-1">
-                  {item.sku}
+                  {item.sku ?? "N/A"}
                 </p>
               </div>
-              <Badge variant="outline">
-                {item.type === "simple" ? "Simple" : "Variant"}
-              </Badge>
+              <Badge variant="outline">{item.sizeInfo}</Badge>
             </div>
             <div className="flex items-center gap-2">
               {getStockBadge(item.stock)}
-              {item.isActive ? (
-                <Badge variant="default">Active</Badge>
-              ) : (
-                <Badge variant="outline">Inactive</Badge>
-              )}
             </div>
             <button
               onClick={() => onAdjustStock(item)}
               className="w-full text-sm text-primary hover:underline text-left"
             >
-              Adjust Stock →
+              Adjust Stock
             </button>
           </div>
         ))}

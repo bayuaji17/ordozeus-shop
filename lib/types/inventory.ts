@@ -26,13 +26,12 @@ export type MovementType = "in" | "out" | "adjust";
 export interface InventoryItem {
   id: ID;
   productId: string;
-  variantId: string | null;
+  productSizeId: string;
   name: string;
   sku: string;
   stock: number;
   status: ProductStatus;
-  hasVariant: boolean;
-  variantInfo: string | null; // e.g., "Size: M • Color: Red"
+  sizeInfo: string;
   primaryImage: string | null;
   lastMovementAt: Date | null;
 }
@@ -56,7 +55,7 @@ export interface InventoryItemDetail extends InventoryItem {
 export interface InventoryMovement {
   id: ID;
   productId: string;
-  variantId: string | null;
+  productSizeId: string | null;
   type: MovementType;
   quantity: number;
   previousStock: number;
@@ -71,7 +70,7 @@ export interface InventoryMovement {
  */
 export interface StockAdjustmentInput {
   productId: string;
-  variantId?: string | null;
+  productSizeId: string;
   type: MovementType;
   quantity: number;
   reason?: string;
@@ -91,12 +90,11 @@ export interface BulkStockAdjustmentInput {
 /**
  * Stock level filter values
  */
-export type StockLevelFilter = "all" | "in-stock" | "low-stock" | "out-of-stock";
-
-/**
- * Product type filter values
- */
-export type ProductTypeFilter = "all" | "simple" | "variant";
+export type StockLevelFilter =
+  | "all"
+  | "in-stock"
+  | "low-stock"
+  | "out-of-stock";
 
 /**
  * Inventory list filter options
@@ -104,7 +102,6 @@ export type ProductTypeFilter = "all" | "simple" | "variant";
 export interface InventoryFilters {
   search?: string;
   stockLevel?: StockLevelFilter;
-  productType?: ProductTypeFilter;
 }
 
 /**

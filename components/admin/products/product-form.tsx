@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -20,113 +20,118 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldSet,
-  FieldLegend,
 } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
-  ProductOptionsBuilder,
-  type ProductOptionData,
-} from "./product-options-builder";
-import { VariantPreviewTable } from "./variant-preview-table";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { productSchema, type ProductFormData } from "@/lib/validations/product";
 import { createProduct, updateProduct } from "@/lib/actions/products";
 import { generateSlug } from "@/lib/utils/slug";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
-import { Loader2 } from "lucide-react";
-import type {
-  CategoryOption,
-  ProductFormProduct,
-  VariantPreviewData,
-} from "@/lib/types";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+import type { CategoryOption, ProductFormProduct, Size } from "@/lib/types";
+
+interface CategoryNode {
+  id: string;
+  name: string;
+  level: number;
+  children: CategoryNode[];
+}
+
+function buildCategoryTree(categories: CategoryOption[]): CategoryNode[] {
+  const map = new Map<string, CategoryNode>();
+  const roots: CategoryNode[] = [];
+
+  for (const cat of categories) {
+    map.set(cat.id, {
+      id: cat.id,
+      name: cat.name,
+      level: cat.level,
+      children: [],
+    });
+  }
+  for (const cat of categories) {
+    const node = map.get(cat.id)!;
+    if (cat.parentId && map.has(cat.parentId)) {
+      map.get(cat.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+function countSelectedInTree(node: CategoryNode, selected: string[]): number {
+  let count = selected.includes(node.id) ? 1 : 0;
+  for (const child of node.children) {
+    count += countSelectedInTree(child, selected);
+  }
+  return count;
+}
 
 interface ProductFormProps {
   mode: "create" | "edit";
   product?: ProductFormProduct;
   categories: CategoryOption[];
+  availableSizes: Size[];
 }
 
-// Form value types that match the discriminated union schema
-type SimpleProductFormValues = {
-  name: string;
-  slug: string;
-  description?: string;
-  basePrice: number;
-  status?: "draft" | "active" | "archived";
-  hasVariant: false;
-  stock: number;
-  categoryIds?: string[];
-};
-
-type VariantProductFormValues = {
-  name: string;
-  slug: string;
-  description?: string;
-  basePrice: number;
-  status?: "draft" | "active" | "archived";
-  hasVariant: true;
-  categoryIds?: string[];
-  options: {
-    id?: string;
-    name: string;
-    values: {
-      id?: string;
-      value: string;
-    }[];
-  }[];
-  variants: {
-    id?: string;
-    sku: string;
-    price: number;
-    stock: number;
-    optionValueIds: string[];
-    isActive?: boolean;
-  }[];
-};
-
-type FormValues = SimpleProductFormValues | VariantProductFormValues;
-
-// Helper to generate cartesian product
-function cartesianProduct<T>(arrays: T[][]): T[][] {
-  if (arrays.length === 0) return [[]];
-  if (arrays.length === 1) return arrays[0].map((item) => [item]);
-
-  const [first, ...rest] = arrays;
-  const restProduct = cartesianProduct(rest);
-
-  return first.flatMap((item) => restProduct.map((prod) => [item, ...prod]));
-}
-
-// Helper to generate SKU
-function generateSKU(slug: string, values: string[], index: number): string {
-  const initials = values
-    .map((val) => val.substring(0, 2).toUpperCase())
-    .join("");
-  const paddedIndex = String(index + 1).padStart(3, "0");
-  return `${slug}-${initials}-${paddedIndex}`;
-}
-
-export function ProductForm({ mode, product, categories }: ProductFormProps) {
+export function ProductForm({
+  mode,
+  product,
+  categories,
+  availableSizes,
+}: ProductFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(
     mode === "edit",
   );
-  const [hasVariant, setHasVariant] = useState(product?.hasVariant ?? false);
-  const [options, setOptions] = useState<ProductOptionData[]>(
-    product?.options?.map((opt) => ({
-      id: opt.id,
-      name: opt.name,
-      values: opt.values.map((v) => ({ id: v.id, value: v.value })),
-    })) ?? [],
-  );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     product?.productCategories?.map((pc) => pc.category.id) ?? [],
   );
-  const [variants, setVariants] = useState<VariantPreviewData[]>([]);
 
-  const form = useForm<FormValues>({
+  // Track selected sizes with their stock values
+  const [selectedSizes, setSelectedSizes] = useState<
+    Array<{ sizeId: string; sku: string; stock: number }>
+  >(
+    product?.sizes?.map((ps) => ({
+      sizeId: ps.sizeId,
+      sku: ps.sku ?? "",
+      stock: ps.stock,
+    })) ?? [],
+  );
+
+  // Size type selector state
+  const [selectedSizeTypeId, setSelectedSizeTypeId] = useState<string>(() => {
+    if (product?.sizes?.length) {
+      const firstSizeId = product.sizes[0].sizeId;
+      const match = availableSizes.find((s) => s.id === firstSizeId);
+      return match?.sizeTypeId ?? "";
+    }
+    return "";
+  });
+  const [pendingSizeTypeId, setPendingSizeTypeId] = useState<string | null>(
+    null,
+  );
+  const [showSizeTypeChangeAlert, setShowSizeTypeChangeAlert] = useState(false);
+
+  const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: product?.name ?? "",
@@ -134,125 +139,83 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
       description: product?.description ?? "",
       basePrice: product?.basePrice ?? 0,
       status: product?.status ?? "draft",
-      hasVariant: product?.hasVariant ?? false,
-      stock: product?.stock ?? 0,
+      isFeatured: product?.isFeatured ?? false,
+      displayOrder: product?.displayOrder ?? 0,
       categoryIds:
         product?.productCategories?.map((pc) => pc.category.id) ?? [],
-      options: [],
-      variants: [],
+      sizes:
+        product?.sizes?.map((ps) => ({
+          sizeId: ps.sizeId,
+          sku: ps.sku ?? "",
+          stock: ps.stock,
+        })) ?? [],
     },
   });
 
   const watchName = form.watch("name");
   const watchSlug = form.watch("slug");
-  const watchBasePrice = form.watch("basePrice");
 
-  // Auto-generate slug from name (only in create mode and until manually edited)
+  // Auto-generate slug from name
   useEffect(() => {
     if (mode === "create" && watchName && !isSlugManuallyEdited) {
       form.setValue("slug", generateSlug(watchName));
     }
   }, [watchName, isSlugManuallyEdited, form, mode]);
 
-  // Generate variants from options - memoized for performance
-  const generateVariantsFromOptions = useCallback(
-    (opts: ProductOptionData[], slug: string, basePrice: number) => {
-      if (opts.length === 0) return [];
+  // Sync selectedSizes to form
+  useEffect(() => {
+    form.setValue("sizes", selectedSizes, { shouldValidate: true });
+  }, [selectedSizes, form]);
 
-      // Filter out incomplete options
-      const validOptions = opts
-        .filter((opt) => opt.name.trim())
-        .map((opt) => ({
-          ...opt,
-          values: opt.values.filter((v) => v.value.trim()),
-        }))
-        .filter((opt) => opt.values.length >= 2);
+  // Sync selectedCategories to form
+  useEffect(() => {
+    form.setValue("categoryIds", selectedCategories);
+  }, [selectedCategories, form]);
 
-      if (validOptions.length === 0) return [];
+  // Generate SKU for a size
+  const generateSKU = useCallback(
+    (sizeName: string, index: number) => {
+      const slug = watchSlug || "product";
+      const sizeInitials = sizeName.substring(0, 3).toUpperCase();
+      const paddedIndex = String(index + 1).padStart(3, "0");
+      return `${slug}-${sizeInitials}-${paddedIndex}`;
+    },
+    [watchSlug],
+  );
 
-      // Generate cartesian product of all option values
-      const valueArrays = validOptions.map((opt) => opt.values);
-      const combinations = cartesianProduct(valueArrays);
+  // Add a size
+  const addSize = useCallback(
+    (sizeId: string) => {
+      if (selectedSizes.some((s) => s.sizeId === sizeId)) return;
 
-      return combinations.map((combo, index) => {
-        const combinationText = combo
-          .map((val, idx) => `${validOptions[idx].name}: ${val.value}`)
-          .join(" • ");
+      const sizeRecord = availableSizes.find((s) => s.id === sizeId);
+      if (!sizeRecord) return;
 
-        return {
-          sku: generateSKU(
-            slug || "product",
-            combo.map((v) => v.value),
-            index,
-          ),
-          price: basePrice || 0,
+      setSelectedSizes((prev) => [
+        ...prev,
+        {
+          sizeId,
+          sku: generateSKU(sizeRecord.name, prev.length),
           stock: 0,
-          optionValueIds: combo.map((v) => v.id || ""),
-          combination: combinationText,
-          isActive: true,
-        };
-      });
+        },
+      ]);
+    },
+    [selectedSizes, availableSizes, generateSKU],
+  );
+
+  // Remove a size
+  const removeSize = useCallback((sizeId: string) => {
+    setSelectedSizes((prev) => prev.filter((s) => s.sizeId !== sizeId));
+  }, []);
+
+  // Update size field
+  const updateSizeField = useCallback(
+    (sizeId: string, field: "sku" | "stock", value: string | number) => {
+      setSelectedSizes((prev) =>
+        prev.map((s) => (s.sizeId === sizeId ? { ...s, [field]: value } : s)),
+      );
     },
     [],
-  );
-
-  // Handle options change - sync to form and regenerate variants
-  const handleOptionsChange = useCallback(
-    (newOptions: ProductOptionData[]) => {
-      setOptions(newOptions);
-
-      // Sync options to form for validation
-      const formOptions = newOptions.map((opt) => ({
-        id: opt.id,
-        name: opt.name,
-        values: opt.values.map((v) => ({ id: v.id, value: v.value })),
-      }));
-      form.setValue("options", formOptions, { shouldValidate: true });
-
-      // Regenerate variants when options change
-      const newVariants = generateVariantsFromOptions(
-        newOptions,
-        watchSlug,
-        watchBasePrice,
-      );
-      setVariants(newVariants);
-
-      // Sync variants to form
-      const formVariants = newVariants.map((v) => ({
-        sku: v.sku,
-        price: v.price,
-        stock: v.stock,
-        optionValueIds: v.optionValueIds,
-        isActive: v.isActive ?? true,
-      }));
-      form.setValue("variants", formVariants, { shouldValidate: true });
-    },
-    [form, generateVariantsFromOptions, watchSlug, watchBasePrice],
-  );
-
-  // Handle individual variant field changes
-  const handleVariantChange = useCallback(
-    (
-      index: number,
-      field: keyof VariantPreviewData,
-      value: string | number | boolean,
-    ) => {
-      const updated = [...variants];
-      updated[index] = { ...updated[index], [field]: value };
-      setVariants(updated);
-
-      // Sync to form for validation
-      const formVariants = updated.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        price: v.price,
-        stock: v.stock,
-        optionValueIds: v.optionValueIds,
-        isActive: v.isActive ?? true,
-      }));
-      form.setValue("variants", formVariants, { shouldValidate: true });
-    },
-    [form, variants],
   );
 
   // Handle category toggle
@@ -264,41 +227,19 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
     );
   }, []);
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: ProductFormData) => {
     setIsSubmitting(true);
     try {
-      // Create formData based on discriminated union
-      const formData: ProductFormData = hasVariant
-        ? {
-          name: data.name,
-          slug: data.slug,
-          description: data.description,
-          basePrice: Number(data.basePrice),
-          status: data.status ?? "draft",
-          hasVariant: true,
-          categoryIds: selectedCategories,
-          options: options.map((opt) => ({
-            name: opt.name,
-            values: opt.values.map((v) => ({ value: v.value })),
-          })),
-          variants: variants.map((v) => ({
-            sku: v.sku,
-            price: Number(v.price),
-            stock: Number(v.stock),
-            optionValueIds: v.optionValueIds,
-            isActive: v.isActive,
-          })),
-        }
-        : {
-          name: data.name,
-          slug: data.slug,
-          description: data.description,
-          basePrice: Number(data.basePrice),
-          status: data.status ?? "draft",
-          hasVariant: false,
-          categoryIds: selectedCategories,
-          stock: "stock" in data ? Number(data.stock) : 0,
-        };
+      const formData: ProductFormData = {
+        ...data,
+        basePrice: Number(data.basePrice),
+        categoryIds: selectedCategories,
+        sizes: selectedSizes.map((s) => ({
+          sizeId: s.sizeId,
+          sku: s.sku,
+          stock: Number(s.stock),
+        })),
+      };
 
       const result =
         mode === "create"
@@ -325,15 +266,57 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
     }
   };
 
-  // Group categories by type
-  const categoriesByType = categories.reduce(
-    (acc, cat) => {
-      if (!acc[cat.type]) acc[cat.type] = [];
-      acc[cat.type].push(cat);
-      return acc;
-    },
-    {} as Record<string, CategoryOption[]>,
+  // Build category tree from flat list
+  const categoryTree = useMemo(
+    () => buildCategoryTree(categories),
+    [categories],
   );
+
+  // Extract unique size types from available sizes
+  const sizeTypeOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of availableSizes) {
+      if (!map.has(s.sizeTypeId)) map.set(s.sizeTypeId, s.sizeTypeName);
+    }
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [availableSizes]);
+
+  // Sizes for the currently selected type, not yet selected
+  const filteredUnselectedSizes = useMemo(() => {
+    if (!selectedSizeTypeId) return [];
+    return availableSizes.filter(
+      (s) =>
+        s.sizeTypeId === selectedSizeTypeId &&
+        !selectedSizes.some((ss) => ss.sizeId === s.id),
+    );
+  }, [availableSizes, selectedSizeTypeId, selectedSizes]);
+
+  // Handle size type change with confirmation
+  const handleSizeTypeChange = useCallback(
+    (newTypeId: string) => {
+      if (selectedSizes.length > 0 && selectedSizeTypeId !== newTypeId) {
+        setPendingSizeTypeId(newTypeId);
+        setShowSizeTypeChangeAlert(true);
+      } else {
+        setSelectedSizeTypeId(newTypeId);
+      }
+    },
+    [selectedSizes.length, selectedSizeTypeId],
+  );
+
+  const confirmSizeTypeChange = useCallback(() => {
+    if (pendingSizeTypeId) {
+      setSelectedSizes([]);
+      setSelectedSizeTypeId(pendingSizeTypeId);
+      setPendingSizeTypeId(null);
+    }
+    setShowSizeTypeChangeAlert(false);
+  }, [pendingSizeTypeId]);
+
+  const cancelSizeTypeChange = useCallback(() => {
+    setPendingSizeTypeId(null);
+    setShowSizeTypeChangeAlert(false);
+  }, []);
 
   return (
     <form
@@ -419,8 +402,8 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
               )}
             />
 
-            {/* Base Price and Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Base Price, Status, Featured */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Controller
                 name="basePrice"
                 control={form.control}
@@ -437,9 +420,9 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
                       placeholder="150000"
                       disabled={isSubmitting}
                       onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      field.onChange(isNaN(value) ? 0 : value);
-                    }}
+                        const value = parseInt(e.target.value);
+                        field.onChange(isNaN(value) ? 0 : value);
+                      }}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -478,6 +461,27 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
                   </Field>
                 )}
               />
+
+              <Field orientation="horizontal" className="md:mt-8">
+                <Controller
+                  name="isFeatured"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="is-featured"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+                <FieldLabel
+                  htmlFor="is-featured"
+                  className="cursor-pointer font-normal"
+                >
+                  Featured Product
+                </FieldLabel>
+              </Field>
             </div>
           </FieldGroup>
         </CardContent>
@@ -488,33 +492,153 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
         <CardHeader>
           <CardTitle>Categories</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {Object.entries(categoriesByType).map(([type, cats]) => (
-            <FieldSet key={type}>
-              <FieldLegend variant="label" className="capitalize">
-                {type}
-              </FieldLegend>
-              <FieldGroup data-slot="checkbox-group">
-                {cats.map((cat) => (
-                  <Field key={cat.id} orientation="horizontal">
-                    <Checkbox
-                      id={`category-${cat.id}`}
-                      checked={selectedCategories.includes(cat.id)}
-                      onCheckedChange={() => toggleCategory(cat.id)}
-                      disabled={isSubmitting}
-                    />
-                    <FieldLabel
-                      htmlFor={`category-${cat.id}`}
-                      className="font-normal cursor-pointer"
-                    >
-                      {cat.name}
-                    </FieldLabel>
-                  </Field>
-                ))}
-              </FieldGroup>
-            </FieldSet>
-          ))}
-          {categories.length === 0 && (
+        <CardContent>
+          {categoryTree.length > 0 ? (
+            <Accordion type="multiple" className="w-full">
+              {categoryTree.map((node) => {
+                const selectedCount = countSelectedInTree(
+                  node,
+                  selectedCategories,
+                );
+                if (node.children.length === 0) {
+                  return (
+                    <div key={node.id} className="py-2">
+                      <Field orientation="horizontal">
+                        <Checkbox
+                          id={`category-${node.id}`}
+                          checked={selectedCategories.includes(node.id)}
+                          onCheckedChange={() => toggleCategory(node.id)}
+                          disabled={isSubmitting}
+                        />
+                        <FieldLabel
+                          htmlFor={`category-${node.id}`}
+                          className="font-normal cursor-pointer"
+                        >
+                          {node.name}
+                        </FieldLabel>
+                      </Field>
+                    </div>
+                  );
+                }
+                return (
+                  <AccordionItem key={node.id} value={node.id}>
+                    <AccordionTrigger className="py-3">
+                      <span className="flex items-center gap-2">
+                        {node.name}
+                        {selectedCount > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedCount}
+                          </Badge>
+                        )}
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-1 pl-2">
+                        <Field orientation="horizontal">
+                          <Checkbox
+                            id={`category-${node.id}`}
+                            checked={selectedCategories.includes(node.id)}
+                            onCheckedChange={() => toggleCategory(node.id)}
+                            disabled={isSubmitting}
+                          />
+                          <FieldLabel
+                            htmlFor={`category-${node.id}`}
+                            className="font-normal cursor-pointer"
+                          >
+                            {node.name}
+                          </FieldLabel>
+                        </Field>
+                        {node.children.map((child) => {
+                          if (child.children.length === 0) {
+                            return (
+                              <Field
+                                key={child.id}
+                                orientation="horizontal"
+                                className="pl-4"
+                              >
+                                <Checkbox
+                                  id={`category-${child.id}`}
+                                  checked={selectedCategories.includes(
+                                    child.id,
+                                  )}
+                                  onCheckedChange={() =>
+                                    toggleCategory(child.id)
+                                  }
+                                  disabled={isSubmitting}
+                                />
+                                <FieldLabel
+                                  htmlFor={`category-${child.id}`}
+                                  className="font-normal cursor-pointer"
+                                >
+                                  {child.name}
+                                </FieldLabel>
+                              </Field>
+                            );
+                          }
+                          const childCount = countSelectedInTree(
+                            child,
+                            selectedCategories,
+                          );
+                          return (
+                            <div key={child.id} className="pl-4">
+                              <div className="flex items-center gap-2 py-1">
+                                <Checkbox
+                                  id={`category-${child.id}`}
+                                  checked={selectedCategories.includes(
+                                    child.id,
+                                  )}
+                                  onCheckedChange={() =>
+                                    toggleCategory(child.id)
+                                  }
+                                  disabled={isSubmitting}
+                                />
+                                <label
+                                  htmlFor={`category-${child.id}`}
+                                  className="text-sm font-medium cursor-pointer"
+                                >
+                                  {child.name}
+                                </label>
+                                {childCount > 0 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {childCount}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="space-y-1 pl-6">
+                                {child.children.map((leaf) => (
+                                  <Field key={leaf.id} orientation="horizontal">
+                                    <Checkbox
+                                      id={`category-${leaf.id}`}
+                                      checked={selectedCategories.includes(
+                                        leaf.id,
+                                      )}
+                                      onCheckedChange={() =>
+                                        toggleCategory(leaf.id)
+                                      }
+                                      disabled={isSubmitting}
+                                    />
+                                    <FieldLabel
+                                      htmlFor={`category-${leaf.id}`}
+                                      className="font-normal cursor-pointer"
+                                    >
+                                      {leaf.name}
+                                    </FieldLabel>
+                                  </Field>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          ) : (
             <p className="text-sm text-muted-foreground italic">
               No categories available. Create categories first.
             </p>
@@ -522,91 +646,193 @@ export function ProductForm({ mode, product, categories }: ProductFormProps) {
         </CardContent>
       </Card>
 
-      <Separator />
-
-      {/* Product Type Toggle */}
+      {/* Sizes & Stock */}
       <Card>
         <CardHeader>
-          <CardTitle>Product Type</CardTitle>
+          <CardTitle>Sizes & Stock</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Field orientation="horizontal">
-            <Checkbox
-              id="hasVariant"
-              checked={hasVariant}
-              onCheckedChange={(checked) => {
-                setHasVariant(!!checked);
-                form.setValue("hasVariant", !!checked);
-              }}
-              disabled={isSubmitting}
-            />
-            <FieldLabel
-              htmlFor="hasVariant"
-              className="cursor-pointer font-normal"
-            >
-              This product has variants (e.g., different sizes, colors)
-            </FieldLabel>
-          </Field>
+        <CardContent className="space-y-4">
+          {/* Size type selector */}
+          {sizeTypeOptions.length > 0 ? (
+            <>
+              <Field>
+                <FieldLabel htmlFor="size-type-select">Size Type</FieldLabel>
+                <Select
+                  value={selectedSizeTypeId}
+                  onValueChange={handleSizeTypeChange}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="size-type-select">
+                    <SelectValue placeholder="Select size type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sizeTypeOptions.map((opt) => (
+                      <SelectItem key={opt.id} value={opt.id}>
+                        <span className="capitalize">{opt.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              {/* Selected sizes table */}
+              {selectedSizes.length > 0 && (
+                <div className="rounded-lg border">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr className="border-b">
+                        <th className="px-4 py-2 text-left text-sm font-medium">
+                          Size
+                        </th>
+                        <th className="px-4 py-2 text-left text-sm font-medium">
+                          SKU
+                        </th>
+                        <th className="px-4 py-2 text-left text-sm font-medium">
+                          Stock
+                        </th>
+                        <th className="px-4 py-2 text-right text-sm font-medium">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedSizes.map((ss) => {
+                        const sizeRecord = availableSizes.find(
+                          (s) => s.id === ss.sizeId,
+                        );
+                        return (
+                          <tr
+                            key={ss.sizeId}
+                            className="border-b last:border-0"
+                          >
+                            <td className="px-4 py-2">
+                              <span className="font-medium">
+                                {sizeRecord?.name ?? "Unknown"}
+                              </span>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({sizeRecord?.sizeTypeName})
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <Input
+                                value={ss.sku}
+                                onChange={(e) =>
+                                  updateSizeField(
+                                    ss.sizeId,
+                                    "sku",
+                                    e.target.value,
+                                  )
+                                }
+                                className="h-8 font-mono text-sm"
+                                disabled={isSubmitting}
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <Input
+                                type="number"
+                                value={ss.stock}
+                                min={0}
+                                onChange={(e) =>
+                                  updateSizeField(
+                                    ss.sizeId,
+                                    "stock",
+                                    parseInt(e.target.value) || 0,
+                                  )
+                                }
+                                className="h-8 w-24"
+                                disabled={isSubmitting}
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeSize(ss.sizeId)}
+                                disabled={isSubmitting}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Add size buttons - filtered by selected type */}
+              {selectedSizeTypeId ? (
+                filteredUnselectedSizes.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Add sizes:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {filteredUnselectedSizes.map((size) => (
+                        <Button
+                          key={size.id}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addSize(size.id)}
+                          disabled={isSubmitting}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          {size.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : selectedSizes.length > 0 ? (
+                  <p className="text-sm text-muted-foreground italic">
+                    All sizes of this type have been added.
+                  </p>
+                ) : null
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Select a size type to add sizes.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              No sizes available. Create sizes in Settings first.
+            </p>
+          )}
+
+          {/* Validation error for sizes */}
+          {form.formState.errors.sizes && (
+            <p className="text-sm text-destructive">
+              {form.formState.errors.sizes.message}
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Simple Product: Stock */}
-      {!hasVariant && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Stock</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Controller
-              name="stock"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="product-stock">
-                    Stock Quantity *
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id="product-stock"
-                    type="number"
-                    aria-invalid={fieldState.invalid}
-                    placeholder="100"
-                    min="0"
-                    disabled={isSubmitting}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      field.onChange(isNaN(value) ? 0 : value);
-                    }}
-                  />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Variant Product: Options & Variants */}
-      {hasVariant && (
-        <>
-          <div className="space-y-2">
-            <ProductOptionsBuilder
-              options={options}
-              onChange={handleOptionsChange}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <VariantPreviewTable
-              variants={variants}
-              basePrice={watchBasePrice || 0}
-              onVariantChange={handleVariantChange}
-            />
-          </div>
-        </>
-      )}
+      {/* Size type change confirmation */}
+      <AlertDialog
+        open={showSizeTypeChangeAlert}
+        onOpenChange={setShowSizeTypeChangeAlert}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change size type?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changing the size type will remove {selectedSizes.length} selected
+              size{selectedSizes.length !== 1 ? "s" : ""}. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelSizeTypeChange}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSizeTypeChange}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Form Actions */}
       <div className="flex items-center justify-end gap-4">

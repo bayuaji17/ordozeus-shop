@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
-import { Eye } from "lucide-react";
+import { Eye, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ProductListItem } from "@/lib/types";
 
@@ -22,15 +22,7 @@ function getStatusBadge(status: string) {
   }
 }
 
-function getStockBadge(stock: number, hasVariant: boolean) {
-  if (hasVariant) {
-    return (
-      <span className="text-sm text-muted-foreground">
-        {stock} total
-      </span>
-    );
-  }
-
+function getStockBadge(stock: number) {
   if (stock === 0) {
     return <Badge variant="destructive">Out of Stock</Badge>;
   }
@@ -76,13 +68,27 @@ export function ProductList({ products }: ProductListProps) {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr className="border-b">
-                <th className="px-4 py-3 text-left text-sm font-medium">Product</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Base Price</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Stock</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Variants</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Categories</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Product
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Base Price
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Stock
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Sizes
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Categories
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -92,37 +98,50 @@ export function ProductList({ products }: ProductListProps) {
                   className="border-b last:border-0 hover:bg-muted/50 transition-colors"
                 >
                   <td className="px-4 py-3">
-                    <div>
-                      <Link
-                        href={`/admin/products/${product.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {product.name}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">{product.slug}</p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <Link
+                          href={`/admin/products/${product.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {product.name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          {product.slug}
+                        </p>
+                      </div>
+                      {product.isFeatured && (
+                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="font-medium">{formatCurrency(product.basePrice)}</span>
+                    <span className="font-medium">
+                      {formatCurrency(product.basePrice)}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    {getStockBadge(product.totalStock, product.hasVariant)}
+                    {getStockBadge(product.totalStock)}
                   </td>
                   <td className="px-4 py-3">
-                    {product.hasVariant ? (
-                      <span className="text-sm">{product.variantCount} variants</span>
+                    {product.sizeCount > 0 ? (
+                      <span className="text-sm">{product.sizeCount} sizes</span>
                     ) : (
                       <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     {product.categoryCount > 0 ? (
-                      <span className="text-sm">{product.categoryCount} categories</span>
+                      <span className="text-sm">
+                        {product.categoryCount} categories
+                      </span>
                     ) : (
                       <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">{getStatusBadge(product.status)}</td>
+                  <td className="px-4 py-3">
+                    {getStatusBadge(product.status)}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <Link href={`/admin/products/${product.id}`}>
                       <Button variant="ghost" size="sm">
@@ -148,7 +167,12 @@ export function ProductList({ products }: ProductListProps) {
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
-                <h3 className="font-medium">{product.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium">{product.name}</h3>
+                  {product.isFeatured && (
+                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">{product.slug}</p>
               </div>
               {getStatusBadge(product.status)}
@@ -156,16 +180,18 @@ export function ProductList({ products }: ProductListProps) {
             <div className="grid grid-cols-2 gap-2 text-sm mt-3">
               <div>
                 <span className="text-muted-foreground">Price:</span>
-                <p className="font-medium">{formatCurrency(product.basePrice)}</p>
+                <p className="font-medium">
+                  {formatCurrency(product.basePrice)}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground">Stock:</span>
-                <div className="mt-1">{getStockBadge(product.totalStock, product.hasVariant)}</div>
+                <div className="mt-1">{getStockBadge(product.totalStock)}</div>
               </div>
-              {product.hasVariant && (
+              {product.sizeCount > 0 && (
                 <div>
-                  <span className="text-muted-foreground">Variants:</span>
-                  <p>{product.variantCount}</p>
+                  <span className="text-muted-foreground">Sizes:</span>
+                  <p>{product.sizeCount}</p>
                 </div>
               )}
               {product.categoryCount > 0 && (

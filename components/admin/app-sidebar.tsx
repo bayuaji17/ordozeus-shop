@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
+import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -13,7 +13,7 @@ import {
   FolderTree,
   PackageOpen,
   Image,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -26,9 +26,9 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
-} from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
-import { signOut, useSession } from "@/lib/auth-client"
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { signOut, useSession } from "@/lib/auth-client";
 
 // Menu items with icons
 const menuItems = [
@@ -77,17 +77,18 @@ const menuItems = [
     url: "/admin/settings",
     icon: Settings,
   },
-]
+];
 
 export function AppSidebar() {
-  const router = useRouter()
-  const { data: session } = useSession()
+  const router = useRouter();
+  const pathname = usePathname();
+  const { data: session } = useSession();
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/signin")
-    router.refresh()
-  }
+    await signOut();
+    router.push("/signin");
+    router.refresh();
+  };
 
   return (
     <Sidebar>
@@ -99,16 +100,20 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map((item) => {
+                const isActive =
+                  pathname === item.url || pathname.startsWith(item.url + "/");
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <a href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -130,5 +135,5 @@ export function AppSidebar() {
         <p className="text-xs text-muted-foreground">v1.0.0</p>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

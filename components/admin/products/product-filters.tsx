@@ -34,7 +34,7 @@ export function ProductFilters() {
         router.push(`/admin/products?${params.toString()}`);
       });
     },
-    [router, searchParams]
+    [router, searchParams],
   );
 
   const handleSearchChange = useCallback(
@@ -42,7 +42,7 @@ export function ProductFilters() {
       const value = e.target.value;
       updateSearchParams("search", value);
     },
-    [updateSearchParams]
+    [updateSearchParams],
   );
 
   return (
@@ -64,7 +64,7 @@ export function ProductFilters() {
         defaultValue={searchParams.get("status") || "all"}
         onValueChange={(value) => updateSearchParams("status", value)}
       >
-        <SelectTrigger className="w-full sm:w-[150px]">
+        <SelectTrigger className="w-full sm:w-37.5">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -80,7 +80,7 @@ export function ProductFilters() {
         defaultValue={searchParams.get("stockLevel") || "all"}
         onValueChange={(value) => updateSearchParams("stockLevel", value)}
       >
-        <SelectTrigger className="w-full sm:w-[150px]">
+        <SelectTrigger className="w-full sm:w-37.5">
           <SelectValue placeholder="Stock Level" />
         </SelectTrigger>
         <SelectContent>
@@ -96,7 +96,7 @@ export function ProductFilters() {
         defaultValue={searchParams.get("sortBy") || "created"}
         onValueChange={(value) => updateSearchParams("sortBy", value)}
       >
-        <SelectTrigger className="w-full sm:w-[150px]">
+        <SelectTrigger className="w-full sm:w-37.5">
           <SelectValue placeholder="Sort By" />
         </SelectTrigger>
         <SelectContent>

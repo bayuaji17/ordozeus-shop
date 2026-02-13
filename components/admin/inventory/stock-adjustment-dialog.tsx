@@ -26,10 +26,10 @@ interface StockAdjustmentDialogProps {
   item: {
     id: string;
     productId: string;
-    variantId: string | null;
+    productSizeId: string;
     name: string;
-    sku: string;
-    stock: number | null;
+    sku: string | null;
+    stock: number;
   } | null;
 }
 
@@ -81,7 +81,7 @@ export function StockAdjustmentDialog({
     try {
       const adjustmentData: StockAdjustmentFormData = {
         productId: item.productId,
-        variantId: item.variantId,
+        productSizeId: item.productSizeId,
         quantity:
           adjustmentType === "adjust"
             ? formData.quantity
@@ -130,7 +130,7 @@ export function StockAdjustmentDialog({
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">SKU</p>
-                <p className="text-sm font-mono">{item.sku}</p>
+                <p className="text-sm font-mono">{item.sku ?? "N/A"}</p>
               </div>
             </div>
           </div>

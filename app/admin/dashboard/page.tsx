@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Package, Layers, Grid3x3, AlertTriangle } from "lucide-react";
 import { getDashboardStats } from "@/lib/actions/dashboard";
 import Link from "next/link";
@@ -11,9 +17,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
-          Welcome to your admin dashboard
-        </p>
+        <p className="text-muted-foreground">Welcome to your admin dashboard</p>
       </div>
 
       {/* Main Stats Cards */}
@@ -28,26 +32,30 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.products.total}</div>
             <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
-              <span className="text-green-600">{stats.products.active} active</span>
-              <span className="text-yellow-600">{stats.products.draft} draft</span>
-              <span className="text-gray-600">{stats.products.archived} archived</span>
+              <span className="text-green-600">
+                {stats.products.active} active
+              </span>
+              <span className="text-yellow-600">
+                {stats.products.draft} draft
+              </span>
+              <span className="text-gray-600">
+                {stats.products.archived} archived
+              </span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Categories
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Categories</CardTitle>
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.categories.total}</div>
             <div className="mt-2 flex flex-wrap gap-1 text-xs text-muted-foreground">
-              {stats.categories.byGender.map((item) => (
-                <span key={item.type}>
-                  {item.count} {item.type}
+              {stats.categories.byLevel.map((item) => (
+                <span key={item.level}>
+                  {item.count} L{item.level}
                 </span>
               ))}
             </div>
@@ -56,15 +64,13 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Product Variants
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Product Sizes</CardTitle>
             <Grid3x3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.variants.total}</div>
+            <div className="text-2xl font-bold">{stats.sizes.total}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              Total variant combinations
+              Total size combinations
             </p>
           </CardContent>
         </Card>
@@ -105,7 +111,9 @@ export default async function DashboardPage() {
                     Products currently available
                   </span>
                 </div>
-                <span className="text-2xl font-bold">{stats.products.active}</span>
+                <span className="text-2xl font-bold">
+                  {stats.products.active}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -114,7 +122,9 @@ export default async function DashboardPage() {
                     Products in preparation
                   </span>
                 </div>
-                <span className="text-2xl font-bold">{stats.products.draft}</span>
+                <span className="text-2xl font-bold">
+                  {stats.products.draft}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -123,7 +133,9 @@ export default async function DashboardPage() {
                     Products no longer active
                   </span>
                 </div>
-                <span className="text-2xl font-bold">{stats.products.archived}</span>
+                <span className="text-2xl font-bold">
+                  {stats.products.archived}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -133,9 +145,7 @@ export default async function DashboardPage() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Low Stock Items</CardTitle>
-            <CardDescription>
-              Items that need restocking
-            </CardDescription>
+            <CardDescription>Items that need restocking</CardDescription>
           </CardHeader>
           <CardContent>
             {stats.lowStock.count === 0 ? (
@@ -145,11 +155,16 @@ export default async function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {stats.lowStock.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between border-b pb-2 last:border-0">
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between border-b pb-2 last:border-0"
+                  >
                     <div className="flex-1">
-                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-sm font-medium truncate">
+                        {item.name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {item.type === 'product' ? 'Simple Product' : 'Variant'}
+                        {item.sku}
                       </p>
                     </div>
                     <Badge
@@ -178,9 +193,7 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            Navigate to key areas of your store
-          </CardDescription>
+          <CardDescription>Navigate to key areas of your store</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">

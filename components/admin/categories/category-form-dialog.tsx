@@ -36,6 +36,7 @@ import { generateSlug } from "@/lib/utils/slug";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { CategoryImageUpload } from "@/components/admin/categories/category-image-upload";
 
 interface CategoryFormDialogProps {
   open: boolean;
@@ -44,9 +45,18 @@ interface CategoryFormDialogProps {
     id: string;
     name: string;
     slug: string;
-    type: "man" | "woman" | "unisex";
+    parentId: string | null;
+    level: number;
+    displayOrder: number;
     isActive: boolean;
+    imageUrl?: string | null;
+    imageKey?: string | null;
   };
+  allCategories: Array<{
+    id: string;
+    name: string;
+    level: number;
+  }>;
   mode: "create" | "edit";
 }
 
@@ -54,18 +64,28 @@ export function CategoryFormDialog({
   open,
   onOpenChange,
   category,
+  allCategories,
   mode,
 }: CategoryFormDialogProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  const [imageData, setImageData] = useState<{
+    url: string;
+    key: string;
+  } | null>(
+    category?.imageUrl && category?.imageKey
+      ? { url: category.imageUrl, key: category.imageKey }
+      : null,
+  );
 
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: category?.name ?? "",
       slug: category?.slug ?? "",
-      type: category?.type ?? "unisex",
+      parentId: category?.parentId ?? null,
+      displayOrder: category?.displayOrder ?? 0,
       isActive: category?.isActive ?? true,
     },
   });
@@ -85,21 +105,38 @@ export function CategoryFormDialog({
       form.reset({
         name: category?.name ?? "",
         slug: category?.slug ?? "",
-        type: category?.type ?? "unisex",
+        parentId: category?.parentId ?? null,
+        displayOrder: category?.displayOrder ?? 0,
         isActive: category?.isActive ?? true,
+        imageUrl: category?.imageUrl ?? null,
+        imageKey: category?.imageKey ?? null,
       });
       setIsSlugManuallyEdited(false);
+      setImageData(
+        category?.imageUrl && category?.imageKey
+          ? { url: category.imageUrl, key: category.imageKey }
+          : null,
+      );
     }
   }, [open, category, form]);
+
+  // Filter out current category from parent options (can't be parent of itself)
+  const parentOptions = allCategories.filter((c) => c.id !== category?.id);
 
   const onSubmit = async (data: CategoryFormData) => {
     setIsSubmitting(true);
 
     try {
+      const formData: CategoryFormData = {
+        ...data,
+        imageUrl: imageData?.url ?? null,
+        imageKey: imageData?.key ?? null,
+      };
+
       const result =
         mode === "create"
-          ? await createCategory(data)
-          : await updateCategory(category!.id, data);
+          ? await createCategory(formData)
+          : await updateCategory(category!.id, formData);
 
       if (result.success) {
         if (mode === "create") {
@@ -144,6 +181,25 @@ export function CategoryFormDialog({
           className="space-y-4"
         >
           <FieldGroup>
+            {/* Category Image */}
+            <Field>
+              <FieldLabel>Image (optional)</FieldLabel>
+              <CategoryImageUpload
+                currentImage={imageData}
+                onImageUploaded={(data) => {
+                  setImageData(data);
+                  form.setValue("imageUrl", data.url);
+                  form.setValue("imageKey", data.key);
+                }}
+                onImageRemoved={() => {
+                  setImageData(null);
+                  form.setValue("imageUrl", null);
+                  form.setValue("imageKey", null);
+                }}
+                disabled={isSubmitting}
+              />
+            </Field>
+
             {/* Category Name Field */}
             <Controller
               name="name"
@@ -193,31 +249,68 @@ export function CategoryFormDialog({
               )}
             />
 
-            {/* Gender Type Field */}
+            {/* Parent Category Field */}
             <Controller
-              name="type"
+              name="parentId"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="category-type">Gender Type *</FieldLabel>
+                  <FieldLabel htmlFor="category-parent">
+                    Parent Category
+                  </FieldLabel>
                   <Select
                     name={field.name}
-                    value={field.value}
-                    onValueChange={field.onChange}
+                    value={field.value ?? "none"}
+                    onValueChange={(value) =>
+                      field.onChange(value === "none" ? null : value)
+                    }
                     disabled={isSubmitting}
                   >
                     <SelectTrigger
-                      id="category-type"
+                      id="category-parent"
                       aria-invalid={fieldState.invalid}
                     >
-                      <SelectValue />
+                      <SelectValue placeholder="No parent (root category)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="man">Man</SelectItem>
-                      <SelectItem value="woman">Woman</SelectItem>
-                      <SelectItem value="unisex">Unisex</SelectItem>
+                      <SelectItem value="none">
+                        No parent (root category)
+                      </SelectItem>
+                      {parentOptions.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {"—".repeat(cat.level - 1)} {cat.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            {/* Display Order */}
+            <Controller
+              name="displayOrder"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="category-order">
+                    Display Order
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="category-order"
+                    type="number"
+                    min={0}
+                    aria-invalid={fieldState.invalid}
+                    disabled={isSubmitting}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      field.onChange(isNaN(value) ? 0 : value);
+                    }}
+                  />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}

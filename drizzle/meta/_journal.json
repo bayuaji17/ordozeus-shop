@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1770296134766,
-      "tag": "0000_clear_bromley",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1770307020250,
-      "tag": "0001_fuzzy_rogue",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1770392205561,
-      "tag": "0002_lazy_white_queen",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1770483698294,
-      "tag": "0003_square_texas_twister",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1770486471829,
-      "tag": "0004_closed_aaron_stack",
+      "when": 1770962239772,
+      "tag": "0000_mute_infant_terrible",
       "breakpoints": true
     }
   ]

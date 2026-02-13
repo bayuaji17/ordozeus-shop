@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getAllCategories } from "@/lib/actions/products";
+import { getSizes } from "@/lib/actions/sizes";
 import { ProductForm } from "@/components/admin/products/product-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,10 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 async function NewProductContent() {
-  const categories = await getAllCategories();
+  const [categories, { all: availableSizes }] = await Promise.all([
+    getAllCategories(),
+    getSizes(),
+  ]);
 
   return (
     <ProductForm
@@ -15,8 +19,10 @@ async function NewProductContent() {
       categories={categories.map((cat) => ({
         id: cat.id,
         name: cat.name,
-        type: cat.type,
+        parentId: cat.parentId,
+        level: cat.level,
       }))}
+      availableSizes={availableSizes}
     />
   );
 }

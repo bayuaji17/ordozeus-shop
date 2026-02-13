@@ -2,51 +2,80 @@
 
 import { db } from "@/lib/db";
 import { categories, productCategories } from "@/lib/db/schema";
-import { eq, sql, asc, like, or } from "drizzle-orm";
+import { eq, sql, asc, like, or, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   categorySchema,
   type CategoryFormData,
 } from "@/lib/validations/category";
+import { deleteFromR2 } from "@/lib/r2";
 
 /**
- * Get all categories with product counts
+ * Get all categories with product counts and child counts
  */
 export async function getCategories(filters?: {
   search?: string;
-  type?: "man" | "woman" | "unisex" | "all";
+  parentId?: string | null;
+  level?: number;
   isActive?: boolean | "all";
+  page?: number;
+  limit?: number;
 }) {
   try {
-    const { search = "", type = "all", isActive = "all" } = filters || {};
+    const {
+      search = "",
+      parentId,
+      level,
+      isActive = "all",
+      page = 1,
+      limit = 10,
+    } = filters || {};
 
+    // Get categories with product counts
     let query = db
       .select({
         id: categories.id,
         name: categories.name,
         slug: categories.slug,
-        type: categories.type,
+        parentId: categories.parentId,
+        level: categories.level,
+        displayOrder: categories.displayOrder,
+        imageUrl: categories.imageUrl,
+        imageKey: categories.imageKey,
+        icon: categories.icon,
         isActive: categories.isActive,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
         productCount: sql<number>`cast(count(${productCategories.productId}) as integer)`,
       })
       .from(categories)
-      .leftJoin(productCategories, eq(categories.id, productCategories.categoryId))
+      .leftJoin(
+        productCategories,
+        eq(categories.id, productCategories.categoryId),
+      )
       .$dynamic();
 
-    // Apply filters
     const conditions = [];
 
     if (search) {
       conditions.push(
         or(
           like(categories.name, `%${search}%`),
-          like(categories.slug, `%${search}%`)
-        )
+          like(categories.slug, `%${search}%`),
+        ),
       );
     }
 
-    if (type !== "all") {
-      conditions.push(eq(categories.type, type));
+    if (parentId !== undefined) {
+      if (parentId === null) {
+        conditions.push(sql`${categories.parentId} IS NULL`);
+      } else {
+        conditions.push(eq(categories.parentId, parentId));
+      }
+    }
+
+    if (level !== undefined) {
+      conditions.push(eq(categories.level, level));
     }
 
     if (isActive !== "all") {
@@ -54,15 +83,108 @@ export async function getCategories(filters?: {
     }
 
     if (conditions.length > 0) {
-      query = query.where(sql`${sql.join(conditions, sql` AND `)}`);
+      query = query.where(and(...conditions));
     }
 
-    const result = await query.groupBy(categories.id).orderBy(asc(categories.name));
+    const result = await query
+      .groupBy(categories.id)
+      .orderBy(asc(categories.displayOrder), asc(categories.name));
 
-    return result;
+    // Get child counts for each category
+    const childCounts = await db
+      .select({
+        parentId: categories.parentId,
+        count: sql<number>`cast(count(*) as integer)`,
+      })
+      .from(categories)
+      .where(sql`${categories.parentId} IS NOT NULL`)
+      .groupBy(categories.parentId);
+
+    const childCountMap = new Map(
+      childCounts.map((c) => [c.parentId, c.count]),
+    );
+
+    const allCategories = result.map((cat) => ({
+      ...cat,
+      childCount: childCountMap.get(cat.id) || 0,
+    }));
+
+    const total = allCategories.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    const paginatedCategories = allCategories.slice(offset, offset + limit);
+
+    return {
+      categories: paginatedCategories,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
   } catch (error) {
     console.error("Error fetching categories:", error);
     throw new Error("Failed to fetch categories");
+  }
+}
+
+/**
+ * Get category tree (nested structure)
+ */
+export async function getCategoryTree() {
+  try {
+    const allCategories = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        parentId: categories.parentId,
+        level: categories.level,
+        displayOrder: categories.displayOrder,
+        imageUrl: categories.imageUrl,
+        imageKey: categories.imageKey,
+        icon: categories.icon,
+        isActive: categories.isActive,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+        productCount: sql<number>`cast(count(${productCategories.productId}) as integer)`,
+      })
+      .from(categories)
+      .leftJoin(
+        productCategories,
+        eq(categories.id, productCategories.categoryId),
+      )
+      .groupBy(categories.id)
+      .orderBy(asc(categories.displayOrder), asc(categories.name));
+
+    // Build tree structure
+    type TreeNode = (typeof allCategories)[number] & {
+      children: TreeNode[];
+    };
+
+    const categoryMap = new Map<string, TreeNode>();
+    const roots: TreeNode[] = [];
+
+    // Initialize all nodes
+    for (const cat of allCategories) {
+      categoryMap.set(cat.id, { ...cat, children: [] });
+    }
+
+    // Build tree
+    for (const cat of allCategories) {
+      const node = categoryMap.get(cat.id)!;
+      if (cat.parentId && categoryMap.has(cat.parentId)) {
+        categoryMap.get(cat.parentId)!.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+
+    return roots;
+  } catch (error) {
+    console.error("Error fetching category tree:", error);
+    throw new Error("Failed to fetch category tree");
   }
 }
 
@@ -79,7 +201,6 @@ export async function getCategoryById(id: string) {
       return null;
     }
 
-    // Get product count
     const productCountResult = await db
       .select({
         count: sql<number>`cast(count(*) as integer)`,
@@ -104,7 +225,6 @@ export async function getCategoryById(id: string) {
  */
 export async function createCategory(data: CategoryFormData) {
   try {
-    // Validate input
     const validatedData = categorySchema.parse(data);
 
     // Check if slug already exists
@@ -119,16 +239,33 @@ export async function createCategory(data: CategoryFormData) {
       };
     }
 
-    // Insert category
-    const [category] = await db
+    // Auto-calculate level based on parent
+    let level = 1;
+    if (validatedData.parentId) {
+      const parent = await db.query.categories.findFirst({
+        where: eq(categories.id, validatedData.parentId),
+      });
+      if (parent) {
+        level = parent.level + 1;
+      }
+    }
+
+    const result = (await db
       .insert(categories)
       .values({
         name: validatedData.name,
         slug: validatedData.slug,
-        type: validatedData.type,
+        parentId: validatedData.parentId,
+        level,
+        displayOrder: validatedData.displayOrder,
+        imageUrl: validatedData.imageUrl ?? null,
+        imageKey: validatedData.imageKey ?? null,
+        icon: validatedData.icon ?? null,
         isActive: validatedData.isActive,
       })
-      .returning();
+      .returning()) as unknown as { id: string }[];
+
+    const category = result[0];
 
     revalidatePath("/admin/categories");
     revalidatePath("/admin/products/new");
@@ -160,10 +297,8 @@ export async function createCategory(data: CategoryFormData) {
  */
 export async function updateCategory(id: string, data: CategoryFormData) {
   try {
-    // Validate input
     const validatedData = categorySchema.parse(data);
 
-    // Check if category exists
     const existingCategory = await db.query.categories.findFirst({
       where: eq(categories.id, id),
     });
@@ -175,7 +310,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
       };
     }
 
-    // Check if slug is being changed and if it conflicts
+    // Check slug conflict
     if (validatedData.slug !== existingCategory.slug) {
       const slugConflict = await db.query.categories.findFirst({
         where: eq(categories.slug, validatedData.slug),
@@ -189,16 +324,43 @@ export async function updateCategory(id: string, data: CategoryFormData) {
       }
     }
 
-    // Update category
+    // Auto-calculate level based on parent
+    let level = 1;
+    if (validatedData.parentId) {
+      const parent = await db.query.categories.findFirst({
+        where: eq(categories.id, validatedData.parentId),
+      });
+      if (parent) {
+        level = parent.level + 1;
+      }
+    }
+
     await db
       .update(categories)
       .set({
         name: validatedData.name,
         slug: validatedData.slug,
-        type: validatedData.type,
+        parentId: validatedData.parentId,
+        level,
+        displayOrder: validatedData.displayOrder,
+        imageUrl: validatedData.imageUrl ?? null,
+        imageKey: validatedData.imageKey ?? null,
+        icon: validatedData.icon ?? null,
         isActive: validatedData.isActive,
+        updatedAt: new Date(),
       })
       .where(eq(categories.id, id));
+
+    // Clean up old image from R2 if it was replaced or removed
+    const oldImageKey = existingCategory.imageKey;
+    const newImageKey = validatedData.imageKey ?? null;
+    if (oldImageKey && oldImageKey !== newImageKey) {
+      try {
+        await deleteFromR2(oldImageKey);
+      } catch (err) {
+        console.error("Failed to delete old category image from R2:", err);
+      }
+    }
 
     revalidatePath("/admin/categories");
     revalidatePath("/admin/products/new");
@@ -226,7 +388,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
 }
 
 /**
- * Delete a category (only if not used by any products)
+ * Delete a category (only if not used by any products and has no children)
  */
 export async function deleteCategory(id: string) {
   try {
@@ -238,6 +400,23 @@ export async function deleteCategory(id: string) {
       return {
         success: false,
         error: "Category not found",
+      };
+    }
+
+    // Check if category has children
+    const childCountResult = await db
+      .select({
+        count: sql<number>`cast(count(*) as integer)`,
+      })
+      .from(categories)
+      .where(eq(categories.parentId, id));
+
+    const childCount = childCountResult[0]?.count || 0;
+
+    if (childCount > 0) {
+      return {
+        success: false,
+        error: `Cannot delete category with ${childCount} child categor${childCount > 1 ? "ies" : "y"}. Delete children first.`,
       };
     }
 
@@ -254,14 +433,20 @@ export async function deleteCategory(id: string) {
     if (productCount > 0) {
       return {
         success: false,
-        error: `Cannot delete category that is assigned to ${productCount} product${
-          productCount > 1 ? "s" : ""
-        }`,
+        error: `Cannot delete category assigned to ${productCount} product${productCount > 1 ? "s" : ""}`,
       };
     }
 
-    // Delete category
     await db.delete(categories).where(eq(categories.id, id));
+
+    // Clean up image from R2
+    if (category.imageKey) {
+      try {
+        await deleteFromR2(category.imageKey);
+      } catch (err) {
+        console.error("Failed to delete category image from R2:", err);
+      }
+    }
 
     revalidatePath("/admin/categories");
     revalidatePath("/admin/products/new");
@@ -298,7 +483,7 @@ export async function toggleCategoryStatus(id: string, isActive: boolean) {
 
     await db
       .update(categories)
-      .set({ isActive })
+      .set({ isActive, updatedAt: new Date() })
       .where(eq(categories.id, id));
 
     revalidatePath("/admin/categories");

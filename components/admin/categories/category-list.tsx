@@ -19,18 +19,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Edit, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Edit,
+  Trash2,
+  ChevronRight,
+  Image as ImageIcon,
+} from "lucide-react";
 import { deleteCategory, toggleCategoryStatus } from "@/lib/actions/categories";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 
 interface Category {
   id: string;
   name: string;
   slug: string;
-  type: "man" | "woman" | "unisex";
+  parentId: string | null;
+  level: number;
+  displayOrder: number;
   isActive: boolean;
+  imageUrl?: string | null;
+  imageKey?: string | null;
   productCount: number;
+  childCount: number;
 }
 
 interface CategoryListProps {
@@ -38,16 +50,30 @@ interface CategoryListProps {
   onEdit: (category: Category) => void;
 }
 
-function getTypeBadge(type: string) {
-  const typeColors: Record<string, string> = {
-    man: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-    woman: "bg-pink-500/10 text-pink-700 dark:text-pink-400",
-    unisex: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+function getLevelBadge(level: number) {
+  const levelLabels: Record<number, { label: string; className: string }> = {
+    1: {
+      label: "Root",
+      className: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    },
+    2: {
+      label: "L2",
+      className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    },
+    3: {
+      label: "L3",
+      className: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+    },
+  };
+
+  const config = levelLabels[level] || {
+    label: `L${level}`,
+    className: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
   };
 
   return (
-    <Badge variant="outline" className={typeColors[type]}>
-      {type.charAt(0).toUpperCase() + type.slice(1)}
+    <Badge variant="outline" className={config.className}>
+      {config.label}
     </Badge>
   );
 }
@@ -55,7 +81,9 @@ function getTypeBadge(type: string) {
 export function CategoryList({ categories, onEdit }: CategoryListProps) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState<string | null>(null);
 
@@ -80,7 +108,10 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
     setIsDeleting(false);
   };
 
-  const handleToggleStatus = async (categoryId: string, currentStatus: boolean) => {
+  const handleToggleStatus = async (
+    categoryId: string,
+    currentStatus: boolean,
+  ) => {
     setIsTogglingStatus(categoryId);
     const result = await toggleCategoryStatus(categoryId, !currentStatus);
 
@@ -128,11 +159,24 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr className="border-b">
-                <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Products</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Level
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Products
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Children
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -142,16 +186,50 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
                   className="border-b last:border-0 hover:bg-muted/50 transition-colors"
                 >
                   <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium">{category.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {category.slug}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      {category.level > 1 && (
+                        <span className="text-muted-foreground">
+                          {"—".repeat(category.level - 1)}
+                        </span>
+                      )}
+                      {category.imageUrl ? (
+                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded border bg-muted">
+                          <Image
+                            src={category.imageUrl}
+                            alt={category.name}
+                            fill
+                            className="object-cover"
+                            sizes="32px"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border bg-muted">
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium">{category.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {category.slug}
+                        </p>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">{getTypeBadge(category.type)}</td>
+                  <td className="px-4 py-3">{getLevelBadge(category.level)}</td>
                   <td className="px-4 py-3">
-                    <span className="text-sm">{category.productCount} products</span>
+                    <span className="text-sm">
+                      {category.productCount} products
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {category.childCount > 0 ? (
+                      <span className="text-sm flex items-center gap-1">
+                        <ChevronRight className="h-3 w-3" />
+                        {category.childCount}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {category.isActive ? (
@@ -177,7 +255,9 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleToggleStatus(category.id, category.isActive)}
+                          onClick={() =>
+                            handleToggleStatus(category.id, category.isActive)
+                          }
                         >
                           {category.isActive ? "Deactivate" : "Activate"}
                         </DropdownMenuItem>
@@ -206,11 +286,28 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
         {categories.map((category) => (
           <div key={category.id} className="rounded-lg border p-4 space-y-3">
             <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="font-medium">{category.name}</h3>
-                <p className="text-xs text-muted-foreground font-mono mt-1">
-                  {category.slug}
-                </p>
+              <div className="flex items-center gap-3 flex-1">
+                {category.imageUrl ? (
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border bg-muted">
+                    <Image
+                      src={category.imageUrl}
+                      alt={category.name}
+                      fill
+                      className="object-cover"
+                      sizes="40px"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border bg-muted">
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-medium">{category.name}</h3>
+                  <p className="text-xs text-muted-foreground font-mono mt-1">
+                    {category.slug}
+                  </p>
+                </div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -228,7 +325,9 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleToggleStatus(category.id, category.isActive)}
+                    onClick={() =>
+                      handleToggleStatus(category.id, category.isActive)
+                    }
                   >
                     {category.isActive ? "Deactivate" : "Activate"}
                   </DropdownMenuItem>
@@ -246,7 +345,7 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
               </DropdownMenu>
             </div>
             <div className="flex items-center gap-2">
-              {getTypeBadge(category.type)}
+              {getLevelBadge(category.level)}
               {category.isActive ? (
                 <Badge variant="default">Active</Badge>
               ) : (
@@ -255,6 +354,7 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
             </div>
             <div className="text-sm text-muted-foreground">
               {category.productCount} products
+              {category.childCount > 0 && ` · ${category.childCount} children`}
             </div>
           </div>
         ))}
@@ -266,11 +366,21 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{categoryToDelete?.name}&quot;?
+              Are you sure you want to delete &quot;{categoryToDelete?.name}
+              &quot;?
               {categoryToDelete && categoryToDelete.productCount > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
-                  This category is assigned to {categoryToDelete.productCount} product
-                  {categoryToDelete.productCount > 1 ? "s" : ""} and cannot be deleted.
+                  This category is assigned to {categoryToDelete.productCount}{" "}
+                  product
+                  {categoryToDelete.productCount > 1 ? "s" : ""} and cannot be
+                  deleted.
+                </span>
+              )}
+              {categoryToDelete && categoryToDelete.childCount > 0 && (
+                <span className="block mt-2 text-destructive font-medium">
+                  This category has {categoryToDelete.childCount} child categor
+                  {categoryToDelete.childCount > 1 ? "ies" : "y"} and cannot be
+                  deleted.
                 </span>
               )}
             </AlertDialogDescription>
@@ -280,7 +390,9 @@ export function CategoryList({ categories, onEdit }: CategoryListProps) {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={
-                isDeleting || (categoryToDelete?.productCount ?? 0) > 0
+                isDeleting ||
+                (categoryToDelete?.productCount ?? 0) > 0 ||
+                (categoryToDelete?.childCount ?? 0) > 0
               }
               className="bg-destructive hover:bg-destructive/90"
             >

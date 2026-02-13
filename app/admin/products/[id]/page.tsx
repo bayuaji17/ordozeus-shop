@@ -3,11 +3,10 @@ import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/actions/products";
 import { ProductDetailHeader } from "@/components/admin/products/product-detail-header";
 import { ProductDetailInfo } from "@/components/admin/products/product-detail-info";
-import { ProductVariantsTable } from "@/components/admin/products/product-variants-table";
-import { ProductOptionsDisplay } from "@/components/admin/products/product-options-display";
 import { ProductImagesGallery } from "@/components/admin/products/product-images-gallery";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import type { ProductImageFull } from "@/lib/types";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -22,6 +21,16 @@ async function ProductDetailContent({ id }: { id: string }) {
     notFound();
   }
 
+  // Map sizes for display
+  const sizesForDisplay = product.sizes.map((ps) => ({
+    id: ps.id,
+    sizeId: ps.sizeId,
+    sizeName: ps.size.name,
+    sizeTypeName: ps.size.sizeType.name,
+    sku: ps.sku,
+    stock: ps.stock,
+  }));
+
   return (
     <div className="space-y-6">
       <ProductDetailHeader
@@ -34,22 +43,26 @@ async function ProductDetailContent({ id }: { id: string }) {
 
       <Separator />
 
-      <ProductDetailInfo product={product} />
+      <ProductDetailInfo
+        product={{
+          ...product,
+          productCategories: product.productCategories.map((pc) => ({
+            category: {
+              id: pc.category.id,
+              name: pc.category.name,
+              parentId: pc.category.parentId,
+            },
+          })),
+          sizes: sizesForDisplay,
+        }}
+      />
 
       <Separator />
 
       <ProductImagesGallery
         productId={product.id}
-        initialImages={product.images || []}
+        initialImages={(product.images || []) as ProductImageFull[]}
       />
-
-      {product.hasVariant && (
-        <>
-          <Separator />
-          <ProductOptionsDisplay options={product.options || []} />
-          <ProductVariantsTable variants={product.variants || []} />
-        </>
-      )}
     </div>
   );
 }
@@ -80,7 +93,9 @@ function ProductDetailSkeleton() {
   );
 }
 
-export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
+export default async function ProductDetailPage({
+  params,
+}: ProductDetailPageProps) {
   const { id } = await params;
 
   return (

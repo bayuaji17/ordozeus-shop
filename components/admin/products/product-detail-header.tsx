@@ -143,7 +143,7 @@ export function ProductDetailHeader({ product }: ProductDetailHeaderProps) {
             <AlertDialogTitle>Delete Product</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{product.name}&quot;? This
-              will set the product status to archived.
+              will permanently delete the product and all its associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -10,7 +10,6 @@ interface InventoryPageProps {
   searchParams: Promise<{
     search?: string;
     stockLevel?: "all" | "in-stock" | "low-stock" | "out-of-stock";
-    productType?: "all" | "simple" | "variant";
     page?: string;
   }>;
 }
@@ -23,9 +22,8 @@ async function InventoryContent({ searchParams }: InventoryPageProps) {
     getInventoryOverview({
       search: params.search,
       stockLevel: params.stockLevel || "all",
-      productType: params.productType || "all",
       page,
-      limit: 20,
+      limit: 10,
     }),
     getInventoryHistory(undefined, undefined, 10),
   ]);

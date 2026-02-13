@@ -4,10 +4,10 @@
  * Central export point for all shared types across the application.
  *
  * Usage:
- *   import { Product, Category, PaginatedResponse } from "@/lib/types";
+ *   import { ProductListItem, Category, PaginatedResponse } from "@/lib/types";
  *
  * Or import from specific domain:
- *   import { ProductVariant } from "@/lib/types/product";
+ *   import { ProductSize } from "@/lib/types/product";
  */
 
 // ============================================================================
@@ -54,15 +54,10 @@ export type {
 export type {
   // Status
   ProductStatus,
-  // Option Types
-  ProductOptionValue,
-  ProductOption,
-  ProductOptionInput,
-  // Variant Types
-  VariantValueWithOption,
-  ProductVariant,
-  VariantPreviewData,
-  ProductVariantInput,
+  // Size Types
+  Size,
+  ProductSize,
+  ProductSizeInput,
   // Image Types
   ProductImageFull,
   ProductImage,
@@ -84,11 +79,10 @@ export type {
 // Category Types
 // ============================================================================
 export type {
-  CategoryGender,
   Category,
   CategoryListItem,
   CategoryOption,
-  CategoriesByGender,
+  CategoryTreeNode,
   CategoryFilters,
   CategorySortField,
 } from "./category";
@@ -110,7 +104,6 @@ export type {
   StockAdjustmentInput,
   BulkStockAdjustmentInput,
   StockLevelFilter,
-  ProductTypeFilter,
   InventoryFilters,
   InventorySortField,
   StockLevel,

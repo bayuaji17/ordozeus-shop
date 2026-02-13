@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getProductById, getAllCategories } from "@/lib/actions/products";
+import { getSizes } from "@/lib/actions/sizes";
 import { ProductForm } from "@/components/admin/products/product-form";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -11,24 +12,47 @@ interface EditProductPageProps {
 }
 
 async function EditProductContent({ id }: { id: string }) {
-  const [product, categories] = await Promise.all([
+  const [product, categories, { all: availableSizes }] = await Promise.all([
     getProductById(id),
     getAllCategories(),
+    getSizes(),
   ]);
 
   if (!product) {
     notFound();
   }
 
+  // Map product for form
+  const productForForm = {
+    ...product,
+    productCategories: product.productCategories.map((pc) => ({
+      category: {
+        id: pc.category.id,
+        name: pc.category.name,
+        parentId: pc.category.parentId,
+      },
+    })),
+    sizes: product.sizes.map((ps) => ({
+      id: ps.id,
+      sizeId: ps.sizeId,
+      sizeName: ps.size.name,
+      sizeTypeName: ps.size.sizeType.name,
+      sku: ps.sku,
+      stock: ps.stock,
+    })),
+  };
+
   return (
     <ProductForm
       mode="edit"
-      product={product}
+      product={productForForm}
       categories={categories.map((cat) => ({
         id: cat.id,
         name: cat.name,
-        type: cat.type,
+        parentId: cat.parentId,
+        level: cat.level,
       }))}
+      availableSizes={availableSizes}
     />
   );
 }
@@ -43,7 +67,9 @@ function EditProductSkeleton() {
   );
 }
 
-export default async function EditProductPage({ params }: EditProductPageProps) {
+export default async function EditProductPage({
+  params,
+}: EditProductPageProps) {
   const { id } = await params;
 
   return (

@@ -79,7 +79,7 @@ export function ProductImageCard({
 
   return (
     <>
-      <Card className="overflow-hidden group">
+      <Card className="overflow-hidden group py-0 pb-6">
         <CardContent className="p-0">
           {/* Image Container */}
           <div className="relative aspect-square bg-muted">
@@ -157,7 +157,9 @@ export function ProductImageCard({
             ) : (
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{image.fileName}</p>
+                  <p className="text-sm font-medium truncate">
+                    {image.fileName}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {image.altText || "No alt text"}
                   </p>
@@ -189,7 +191,8 @@ export function ProductImageCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Image?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this image. This action cannot be undone.
+              This will permanently delete this image. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { products, productVariants, categories } from "@/lib/db/schema";
-import { sql, eq, and, lt } from "drizzle-orm";
+import { products, productSizes, sizes, categories } from "@/lib/db/schema";
+import { sql, eq, lt } from "drizzle-orm";
 
 export async function getDashboardStats() {
   try {
@@ -15,59 +15,53 @@ export async function getDashboardStats() {
       .from(products)
       .groupBy(products.status);
 
-    // Get total categories count by gender
+    // Get total categories count by level
     const categoryStats = await db
       .select({
-        type: categories.type,
+        level: categories.level,
         count: sql<number>`cast(count(*) as integer)`,
       })
       .from(categories)
-      .groupBy(categories.type);
+      .groupBy(categories.level);
 
-    // Get total variants count
-    const variantsCount = await db
+    // Get total product sizes count
+    const sizesCount = await db
       .select({
         count: sql<number>`cast(count(*) as integer)`,
       })
-      .from(productVariants);
+      .from(productSizes);
 
-    // Get low stock items (products with stock < 10, variants with stock < 5)
-    const lowStockProducts = await db
+    // Get low stock product sizes (stock < 10)
+    const lowStockItems = await db
       .select({
-        id: products.id,
-        name: products.name,
-        stock: products.stock,
-        type: sql<string>`'product'`,
+        id: productSizes.id,
+        name: sql<string>`${products.name} || ' - ' || ${sizes.name}`,
+        stock: productSizes.stock,
+        sku: productSizes.sku,
       })
-      .from(products)
-      .where(
-        and(
-          eq(products.hasVariant, false),
-          lt(products.stock, 10)
-        )
-      );
-
-    const lowStockVariants = await db
-      .select({
-        id: productVariants.id,
-        name: sql<string>`${products.name} || ' - ' || ${productVariants.sku}`,
-        stock: productVariants.stock,
-        type: sql<string>`'variant'`,
-      })
-      .from(productVariants)
-      .innerJoin(products, eq(productVariants.productId, products.id))
-      .where(lt(productVariants.stock, 5));
-
-    const lowStockItems = [...lowStockProducts, ...lowStockVariants];
+      .from(productSizes)
+      .innerJoin(products, eq(productSizes.productId, products.id))
+      .innerJoin(sizes, eq(productSizes.sizeId, sizes.id))
+      .where(lt(productSizes.stock, 10))
+      .orderBy(productSizes.stock);
 
     // Calculate totals
-    const totalProducts = productStats.reduce((acc, stat) => acc + stat.count, 0);
-    const activeProducts = productStats.find(s => s.status === 'active')?.count || 0;
-    const draftProducts = productStats.find(s => s.status === 'draft')?.count || 0;
-    const archivedProducts = productStats.find(s => s.status === 'archived')?.count || 0;
+    const totalProducts = productStats.reduce(
+      (acc, stat) => acc + stat.count,
+      0,
+    );
+    const activeProducts =
+      productStats.find((s) => s.status === "active")?.count || 0;
+    const draftProducts =
+      productStats.find((s) => s.status === "draft")?.count || 0;
+    const archivedProducts =
+      productStats.find((s) => s.status === "archived")?.count || 0;
 
-    const totalCategories = categoryStats.reduce((acc, stat) => acc + stat.count, 0);
-    const totalVariants = variantsCount[0]?.count || 0;
+    const totalCategories = categoryStats.reduce(
+      (acc, stat) => acc + stat.count,
+      0,
+    );
+    const totalSizes = sizesCount[0]?.count || 0;
 
     return {
       products: {
@@ -78,14 +72,14 @@ export async function getDashboardStats() {
       },
       categories: {
         total: totalCategories,
-        byGender: categoryStats,
+        byLevel: categoryStats,
       },
-      variants: {
-        total: totalVariants,
+      sizes: {
+        total: totalSizes,
       },
       lowStock: {
         count: lowStockItems.length,
-        items: lowStockItems.slice(0, 5), // Top 5 low stock items
+        items: lowStockItems.slice(0, 5),
       },
     };
   } catch (error) {

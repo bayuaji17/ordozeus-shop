@@ -1,34 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { InventoryTable } from "@/components/admin/inventory/inventory-table";
 import { InventoryFilters } from "@/components/admin/inventory/inventory-filters";
 import { StockAdjustmentDialog } from "@/components/admin/inventory/stock-adjustment-dialog";
 import { InventoryHistory } from "@/components/admin/inventory/inventory-history";
+import { Pagination } from "@/components/admin/pagination";
 
 interface InventoryItem {
   id: string;
   productId: string;
-  variantId: string | null;
+  productSizeId: string;
   name: string;
-  sku: string;
-  stock: number | null;
-  hasVariant: boolean;
-  isActive: boolean;
-  type: string;
+  sku: string | null;
+  stock: number;
+  status: string;
+  sizeInfo: string;
+  sizeType: string;
 }
 
 interface InventoryMovement {
   id: string;
   productId: string;
-  variantId: string | null;
+  productSizeId: string | null;
   type: "in" | "out" | "adjust";
   quantity: number;
   reason: string | null;
   createdAt: Date;
   productName: string | null;
-  variantSku: string | null;
+  sizeName: string | null;
+  sku: string | null;
 }
 
 interface Pagination {
@@ -71,7 +79,8 @@ export function InventoryClient({
           <CardHeader>
             <CardTitle>Inventory Overview</CardTitle>
             <CardDescription>
-              {pagination.total} item{pagination.total !== 1 ? "s" : ""} in inventory
+              {pagination.total} item{pagination.total !== 1 ? "s" : ""} in
+              inventory
             </CardDescription>
             <div className="pt-4">
               <InventoryFilters />
@@ -81,6 +90,13 @@ export function InventoryClient({
             <InventoryTable items={items} onAdjustStock={handleAdjustStock} />
           </CardContent>
         </Card>
+
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          basePath="/admin/inventory"
+        />
 
         {recentMovements.length > 0 && (
           <InventoryHistory movements={recentMovements} />

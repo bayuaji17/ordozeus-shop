@@ -20,7 +20,7 @@ export function CategoryFilters() {
   const [isPending, startTransition] = useTransition();
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
-  const [type, setType] = useState(searchParams.get("type") ?? "all");
+  const [level, setLevel] = useState(searchParams.get("level") ?? "all");
   const [status, setStatus] = useState(searchParams.get("status") ?? "all");
 
   const updateFilters = (key: string, value: string) => {
@@ -52,12 +52,12 @@ export function CategoryFilters() {
 
   const hasActiveFilters =
     searchParams.get("search") ||
-    (searchParams.get("type") && searchParams.get("type") !== "all") ||
+    (searchParams.get("level") && searchParams.get("level") !== "all") ||
     (searchParams.get("status") && searchParams.get("status") !== "all");
 
   const clearAllFilters = () => {
     setSearch("");
-    setType("all");
+    setLevel("all");
     setStatus("all");
     startTransition(() => {
       router.push("/admin/categories");
@@ -92,24 +92,24 @@ export function CategoryFilters() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="type-filter" className="text-sm mb-2 block">
-            Gender Type
+          <Label htmlFor="level-filter" className="text-sm mb-2 block">
+            Level
           </Label>
           <Select
-            value={type}
+            value={level}
             onValueChange={(value) => {
-              setType(value);
-              updateFilters("type", value);
+              setLevel(value);
+              updateFilters("level", value);
             }}
           >
-            <SelectTrigger id="type-filter">
+            <SelectTrigger id="level-filter">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="man">Man</SelectItem>
-              <SelectItem value="woman">Woman</SelectItem>
-              <SelectItem value="unisex">Unisex</SelectItem>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="1">Level 1 (Root)</SelectItem>
+              <SelectItem value="2">Level 2</SelectItem>
+              <SelectItem value="3">Level 3</SelectItem>
             </SelectContent>
           </Select>
         </div>

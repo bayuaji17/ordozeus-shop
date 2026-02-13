@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Category validation schemas
  *
- * Categories are gender-based (man, woman, unisex) and assigned to products.
+ * Categories use a self-referencing tree structure with parentId and level.
  */
 
 export const categorySchema = z.object({
@@ -14,19 +14,21 @@ export const categorySchema = z.object({
   slug: z
     .string()
     .min(1, "Slug is required")
-    .max(100, "Slug must be 100 characters or less")
+    .max(150, "Slug must be 150 characters or less")
     .regex(
       /^[a-z0-9-]+$/,
       "Slug must contain only lowercase letters, numbers, and hyphens",
     ),
-  type: z.enum(["man", "woman", "unisex"], {
-    message: "Please select a valid gender type",
-  }),
+  parentId: z.string().uuid().nullable(),
+  displayOrder: z.number().int().min(0),
+  imageUrl: z.string().url().nullable().optional(),
+  imageKey: z.string().nullable().optional(),
+  icon: z.string().max(100).nullable().optional(),
   isActive: z.boolean(),
 });
 
 export const updateCategorySchema = categorySchema.partial().extend({
-  id: z.uuid(),
+  id: z.string().uuid(),
 });
 
 // Type exports

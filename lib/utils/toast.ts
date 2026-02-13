@@ -16,9 +16,19 @@ export const showSuccessToast = {
   categoryUpdated: () => toast.success("Category updated successfully"),
   categoryDeleted: () => toast.success("Category deleted successfully"),
 
+  sizeCreated: () => toast.success("Size created successfully"),
+  sizeUpdated: () => toast.success("Size updated successfully"),
+  sizeDeleted: () => toast.success("Size deleted successfully"),
+
+  sizeTypeCreated: () => toast.success("Size type created successfully"),
+  sizeTypeUpdated: () => toast.success("Size type updated successfully"),
+  sizeTypeDeleted: () => toast.success("Size type deleted successfully"),
+
   stockAdjusted: () => toast.success("Stock adjusted successfully"),
   bulkStockAdjusted: (count: number) =>
-    toast.success(`${count} stock adjustment${count > 1 ? 's' : ''} applied successfully`),
+    toast.success(
+      `${count} stock adjustment${count > 1 ? "s" : ""} applied successfully`,
+    ),
 };
 
 export const showErrorToast = {
@@ -41,9 +51,24 @@ export const showErrorToast = {
   categoryInUse: () =>
     toast.error("Cannot delete category that is assigned to products"),
 
+  sizeCreate: (message?: string) =>
+    toast.error(message || "Failed to create size"),
+  sizeUpdate: (message?: string) =>
+    toast.error(message || "Failed to update size"),
+  sizeDelete: (message?: string) =>
+    toast.error(message || "Failed to delete size"),
+  sizeInUse: () => toast.error("Cannot delete size that is used by products"),
+
+  sizeTypeCreate: (message?: string) =>
+    toast.error(message || "Failed to create size type"),
+  sizeTypeUpdate: (message?: string) =>
+    toast.error(message || "Failed to update size type"),
+  sizeTypeDelete: (message?: string) =>
+    toast.error(message || "Failed to delete size type"),
+  sizeTypeInUse: () => toast.error("Cannot delete size type that has sizes"),
+
   stockAdjustment: (message?: string) =>
     toast.error(message || "Failed to adjust stock"),
 
-  validation: (message: string) =>
-    toast.error(message),
+  validation: (message: string) => toast.error(message),
 };

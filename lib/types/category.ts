@@ -1,19 +1,10 @@
 /**
  * Category domain types
  *
- * Types for product categories and their relations.
+ * Types for hierarchical product categories with self-referencing tree structure.
  */
 
 import type { ID } from "./common";
-
-// ============================================================================
-// Category Enums
-// ============================================================================
-
-/**
- * Gender type for categories
- */
-export type CategoryGender = "man" | "woman" | "unisex";
 
 // ============================================================================
 // Category Types
@@ -26,17 +17,23 @@ export interface Category {
   id: ID;
   name: string;
   slug: string;
-  type: CategoryGender;
+  parentId: string | null;
+  level: number;
+  displayOrder: number;
+  imageUrl: string | null;
+  imageKey: string | null;
+  icon: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * Category for list views (with product count)
+ * Category for list views (with product count and child count)
  */
 export interface CategoryListItem extends Category {
   productCount: number;
+  childCount: number;
 }
 
 /**
@@ -45,13 +42,17 @@ export interface CategoryListItem extends Category {
 export interface CategoryOption {
   id: string;
   name: string;
-  type: CategoryGender;
+  parentId: string | null;
+  level: number;
 }
 
 /**
- * Categories grouped by gender type
+ * Category tree node (for nested display)
  */
-export type CategoriesByGender = Record<CategoryGender, CategoryOption[]>;
+export interface CategoryTreeNode extends Category {
+  children: CategoryTreeNode[];
+  productCount: number;
+}
 
 // ============================================================================
 // Category Filters
@@ -62,11 +63,17 @@ export type CategoriesByGender = Record<CategoryGender, CategoryOption[]>;
  */
 export interface CategoryFilters {
   search?: string;
-  type?: CategoryGender | "all";
+  parentId?: string | null;
+  level?: number;
   isActive?: boolean;
 }
 
 /**
  * Category sort fields
  */
-export type CategorySortField = "name" | "createdAt" | "productCount" | "type";
+export type CategorySortField =
+  | "name"
+  | "createdAt"
+  | "productCount"
+  | "displayOrder"
+  | "level";

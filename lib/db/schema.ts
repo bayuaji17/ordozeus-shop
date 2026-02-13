@@ -7,8 +7,35 @@ import {
   uuid,
   varchar,
   integer,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+export const productStatusEnum = pgEnum("product_status", [
+  "draft",
+  "active",
+  "archived",
+]);
+
+export const inventoryTypeEnum = pgEnum("inventory_type", [
+  "in",
+  "out",
+  "adjust",
+]);
+
+export const carouselStatusEnum = pgEnum("carousel_status", [
+  "active",
+  "inactive",
+  "scheduled",
+]);
+
+// ============================================================================
+// AUTH TABLES (UNCHANGED)
+// ============================================================================
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -16,7 +43,7 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
-  role: text("role").notNull().default("user"), // "admin" or "user"
+  role: text("role").notNull().default("user"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -60,25 +87,38 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
-export const genderEnum = pgEnum("gender", ["man", "woman", "unisex"]);
 
-export const productStatusEnum = pgEnum("product_status", [
-  "draft",
-  "active",
-  "archived",
-]);
+// ============================================================================
+// CATEGORY TREE (SELF-RELATION)
+// ============================================================================
 
-export const inventoryTypeEnum = pgEnum("inventory_type", [
-  "in",
-  "out",
-  "adjust",
-]);
+export const categories = pgTable("categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 150 }).notNull().unique(),
 
-export const carouselStatusEnum = pgEnum("carousel_status", [
-  "active",
-  "inactive",
-  "scheduled",
-]);
+  parentId: uuid("parent_id").references((): AnyPgColumn => categories.id, {
+    onDelete: "cascade",
+  }),
+
+  level: integer("level").notNull().default(1), // 1=Gender, 2=Type, 3=Subtype
+
+  displayOrder: integer("display_order").notNull().default(0),
+
+  // Visual Support
+  imageUrl: text("image_url"),
+  imageKey: text("image_key"),
+  icon: varchar("icon", { length: 100 }),
+
+  isActive: boolean("is_active").default(true).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================================================
+// PRODUCTS (NO COMPLEX VARIANT SYSTEM)
+// ============================================================================
 
 export const products = pgTable("products", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -89,89 +129,97 @@ export const products = pgTable("products", {
 
   basePrice: integer("base_price").notNull(),
 
-  hasVariant: boolean("has_variant").default(false).notNull(),
-
-  // hanya dipakai jika hasVariant = false
-  stock: integer("stock"),
-
   status: productStatusEnum("status").default("draft").notNull(),
+
+  isFeatured: boolean("is_featured").default(false).notNull(),
+
+  displayOrder: integer("display_order").notNull().default(0),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const categories = pgTable("categories", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  slug: varchar("slug", { length: 100 }).notNull().unique(),
-  // type: varchar("type", { length: 50 }).notNull(),
-  type: genderEnum("gender").notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
-});
+// ============================================================================
+// SIZE TYPES (MASTER TABLE FOR SIZE CATEGORIES)
+// ============================================================================
 
-export const productCategories = pgTable("product_categories", {
-  productId: uuid("product_id")
-    .references(() => products.id)
-    .notNull(),
-
-  categoryId: uuid("category_id")
-    .references(() => categories.id)
-    .notNull(),
-});
-
-export const productOptions = pgTable("product_options", {
+export const sizeTypes = pgTable("size_types", {
   id: uuid("id").defaultRandom().primaryKey(),
 
-  productId: uuid("product_id")
-    .references(() => products.id)
-    .notNull(),
-
-  name: varchar("name", { length: 50 }).notNull(),
-  // size | color
-});
-export const productOptionValues = pgTable("product_option_values", {
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  optionId: uuid("option_id")
-    .references(() => productOptions.id)
-    .notNull(),
-
-  value: varchar("value", { length: 50 }).notNull(),
-  // M, L, Hitam
-});
-export const productVariants = pgTable("product_variants", {
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  productId: uuid("product_id")
-    .references(() => products.id)
-    .notNull(),
-
-  sku: varchar("sku", { length: 100 }).notNull().unique(),
-
-  price: integer("price").notNull(),
-  stock: integer("stock").notNull(),
-
-  isActive: boolean("is_active").default(true).notNull(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+  sortOrder: integer("sort_order").notNull().unique(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-export const productVariantValues = pgTable("product_variant_values", {
-  variantId: uuid("variant_id")
-    .references(() => productVariants.id)
-    .notNull(),
 
-  optionValueId: uuid("option_value_id")
-    .references(() => productOptionValues.id)
-    .notNull(),
+// ============================================================================
+// SIZE MASTER TABLE (FLEXIBLE SIZE SYSTEM)
+// ============================================================================
+
+export const sizes = pgTable("sizes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  name: varchar("name", { length: 50 }).notNull(),
+
+  sizeTypeId: uuid("size_type_id")
+    .notNull()
+    .references(() => sizeTypes.id, { onDelete: "restrict" }),
+
+  sortOrder: integer("sort_order").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ============================================================================
+// PRODUCT SIZES (JOIN WITH SIZE MASTER)
+// ============================================================================
+
+export const productSizes = pgTable("product_sizes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+
+  sizeId: uuid("size_id")
+    .notNull()
+    .references(() => sizes.id, { onDelete: "restrict" }),
+
+  sku: varchar("sku", { length: 100 }).unique(),
+
+  stock: integer("stock").notNull().default(0),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ============================================================================
+// PRODUCT - CATEGORY (PIVOT)
+// ============================================================================
+
+export const productCategories = pgTable("product_categories", {
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+
+  categoryId: uuid("category_id")
+    .notNull()
+    .references(() => categories.id, { onDelete: "cascade" }),
+});
+
+// ============================================================================
+// INVENTORY MOVEMENTS (SIZE-LEVEL TRACKING)
+// ============================================================================
+
 export const inventoryMovements = pgTable("inventory_movements", {
   id: uuid("id").defaultRandom().primaryKey(),
 
   productId: uuid("product_id")
-    .references(() => products.id)
-    .notNull(),
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
 
-  variantId: uuid("variant_id").references(() => productVariants.id),
+  productSizeId: uuid("product_size_id").references(() => productSizes.id, {
+    onDelete: "cascade",
+  }),
 
   type: inventoryTypeEnum("type").notNull(),
 
@@ -182,6 +230,10 @@ export const inventoryMovements = pgTable("inventory_movements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ============================================================================
+// PRODUCT IMAGES
+// ============================================================================
+
 export const productImages = pgTable("product_images", {
   id: uuid("id").defaultRandom().primaryKey(),
 
@@ -189,19 +241,16 @@ export const productImages = pgTable("product_images", {
     .references(() => products.id, { onDelete: "cascade" })
     .notNull(),
 
-  // R2 storage details
-  url: text("url").notNull(), // Public R2 URL
-  key: text("key").notNull(), // R2 object key (for deletion)
+  url: text("url").notNull(),
+  key: text("key").notNull(),
   fileName: varchar("file_name", { length: 255 }).notNull(),
-  fileSize: integer("file_size").notNull(), // bytes
+  fileSize: integer("file_size").notNull(),
   mimeType: varchar("mime_type", { length: 100 }).notNull(),
 
-  // Image metadata
   width: integer("width"),
   height: integer("height"),
   altText: varchar("alt_text", { length: 255 }),
 
-  // Ordering
   displayOrder: integer("display_order").notNull().default(0),
   isPrimary: boolean("is_primary").default(false).notNull(),
 
@@ -209,31 +258,29 @@ export const productImages = pgTable("product_images", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ============================================================================
+// CAROUSEL (UNCHANGED)
+// ============================================================================
+
 export const carousels = pgTable("carousels", {
   id: uuid("id").defaultRandom().primaryKey(),
 
-  // Basic Info
   title: varchar("title", { length: 255 }).notNull(),
   subtitle: text("subtitle"),
   description: text("description"),
 
-  // Image (R2 storage)
   imageUrl: text("image_url").notNull(),
-  imageKey: text("image_key").notNull(), // R2 object key for deletion
+  imageKey: text("image_key").notNull(),
 
-  // Call to Action
   ctaText: varchar("cta_text", { length: 100 }),
   ctaLink: varchar("cta_link", { length: 500 }),
 
-  // Display & Ordering
   displayOrder: integer("display_order").notNull().default(0),
 
-  // Status & Scheduling
   status: carouselStatusEnum("status").default("inactive").notNull(),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
 
-  // Styling (optional)
   backgroundColor: varchar("background_color", { length: 50 }),
   textColor: varchar("text_color", { length: 50 }),
 
@@ -245,75 +292,76 @@ export const carousels = pgTable("carousels", {
 // RELATIONS
 // ============================================================================
 
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
+  parent: one(categories, {
+    fields: [categories.parentId],
+    references: [categories.id],
+  }),
+  children: many(categories),
+  productCategories: many(productCategories),
+}));
+
 export const productsRelations = relations(products, ({ many }) => ({
   productCategories: many(productCategories),
-  productOptions: many(productOptions),
-  productVariants: many(productVariants),
+  sizes: many(productSizes),
   inventoryMovements: many(inventoryMovements),
   productImages: many(productImages),
 }));
 
-export const categoriesRelations = relations(categories, ({ many }) => ({
-  productCategories: many(productCategories),
+export const sizeTypesRelations = relations(sizeTypes, ({ many }) => ({
+  sizes: many(sizes),
 }));
 
-export const productCategoriesRelations = relations(productCategories, ({ one }) => ({
-  product: one(products, {
-    fields: [productCategories.productId],
-    references: [products.id],
+export const sizesRelations = relations(sizes, ({ one, many }) => ({
+  sizeType: one(sizeTypes, {
+    fields: [sizes.sizeTypeId],
+    references: [sizeTypes.id],
   }),
-  category: one(categories, {
-    fields: [productCategories.categoryId],
-    references: [categories.id],
-  }),
+  productSizes: many(productSizes),
 }));
 
-export const productOptionsRelations = relations(productOptions, ({ one, many }) => ({
-  product: one(products, {
-    fields: [productOptions.productId],
-    references: [products.id],
+export const productSizesRelations = relations(
+  productSizes,
+  ({ one, many }) => ({
+    product: one(products, {
+      fields: [productSizes.productId],
+      references: [products.id],
+    }),
+    size: one(sizes, {
+      fields: [productSizes.sizeId],
+      references: [sizes.id],
+    }),
+    inventoryMovements: many(inventoryMovements),
   }),
-  values: many(productOptionValues),
-}));
+);
 
-export const productOptionValuesRelations = relations(productOptionValues, ({ one, many }) => ({
-  option: one(productOptions, {
-    fields: [productOptionValues.optionId],
-    references: [productOptions.id],
+export const productCategoriesRelations = relations(
+  productCategories,
+  ({ one }) => ({
+    product: one(products, {
+      fields: [productCategories.productId],
+      references: [products.id],
+    }),
+    category: one(categories, {
+      fields: [productCategories.categoryId],
+      references: [categories.id],
+    }),
   }),
-  variantValues: many(productVariantValues),
-}));
+);
 
-export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
-  product: one(products, {
-    fields: [productVariants.productId],
-    references: [products.id],
+export const inventoryMovementsRelations = relations(
+  inventoryMovements,
+  ({ one }) => ({
+    product: one(products, {
+      fields: [inventoryMovements.productId],
+      references: [products.id],
+    }),
+    productSize: one(productSizes, {
+      fields: [inventoryMovements.productSizeId],
+      references: [productSizes.id],
+    }),
   }),
-  variantValues: many(productVariantValues),
-  inventoryMovements: many(inventoryMovements),
-}));
-
-export const productVariantValuesRelations = relations(productVariantValues, ({ one }) => ({
-  variant: one(productVariants, {
-    fields: [productVariantValues.variantId],
-    references: [productVariants.id],
-  }),
-  optionValue: one(productOptionValues, {
-    fields: [productVariantValues.optionValueId],
-    references: [productOptionValues.id],
-  }),
-}));
-
-export const inventoryMovementsRelations = relations(inventoryMovements, ({ one }) => ({
-  product: one(products, {
-    fields: [inventoryMovements.productId],
-    references: [products.id],
-  }),
-  variant: one(productVariants, {
-    fields: [inventoryMovements.variantId],
-    references: [productVariants.id],
-  }),
-}));
+);
 
 export const productImagesRelations = relations(productImages, ({ one }) => ({
   product: one(products, {

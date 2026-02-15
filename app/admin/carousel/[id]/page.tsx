@@ -5,6 +5,7 @@ import { getCarouselById } from "@/lib/actions/carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth/server";
 
 interface EditCarouselPageProps {
   params: Promise<{
@@ -35,6 +36,7 @@ function EditCarouselSkeleton() {
 export default async function EditCarouselPage({
   params,
 }: EditCarouselPageProps) {
+  await requireAdmin();
   const { id } = await params;
 
   return (

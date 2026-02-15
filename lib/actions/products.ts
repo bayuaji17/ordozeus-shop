@@ -12,6 +12,7 @@ import {
 import { sql, eq, like, or, and, desc, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { productSchema, type ProductFormData } from "@/lib/validations/product";
+import { requireAdmin } from "@/lib/auth/server";
 
 export type ProductStatus = "draft" | "active" | "archived";
 export type StockLevel = "all" | "in_stock" | "low_stock" | "out_of_stock";
@@ -233,6 +234,7 @@ function generateSizeSKU(
  * Create a new product with sizes
  */
 export async function createProduct(data: ProductFormData) {
+  await requireAdmin();
   try {
     const validatedData = productSchema.parse(data);
 
@@ -328,6 +330,7 @@ export async function createProduct(data: ProductFormData) {
  * Update an existing product
  */
 export async function updateProduct(id: string, data: ProductFormData) {
+  await requireAdmin();
   try {
     const validatedData = productSchema.parse(data);
 
@@ -441,6 +444,7 @@ export async function updateProduct(id: string, data: ProductFormData) {
  * Delete a product permanently (hard delete)
  */
 export async function deleteProduct(id: string) {
+  await requireAdmin();
   try {
     const product = await db.query.products.findFirst({
       where: eq(products.id, id),

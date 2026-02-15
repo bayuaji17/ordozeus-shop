@@ -4,6 +4,7 @@ import { getProductById, getAllCategories } from "@/lib/actions/products";
 import { getSizes } from "@/lib/actions/sizes";
 import { ProductForm } from "@/components/admin/products/product-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAdmin } from "@/lib/auth/server";
 
 interface EditProductPageProps {
   params: Promise<{
@@ -70,6 +71,7 @@ function EditProductSkeleton() {
 export default async function EditProductPage({
   params,
 }: EditProductPageProps) {
+  await requireAdmin();
   const { id } = await params;
 
   return (

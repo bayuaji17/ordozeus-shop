@@ -7,6 +7,7 @@ import { ProductImagesGallery } from "@/components/admin/products/product-images
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import type { ProductImageFull } from "@/lib/types";
+import { requireAdmin } from "@/lib/auth/server";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -96,6 +97,7 @@ function ProductDetailSkeleton() {
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
+  await requireAdmin();
   const { id } = await params;
 
   return (

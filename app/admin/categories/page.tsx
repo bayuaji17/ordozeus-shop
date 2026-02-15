@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getCategories } from "@/lib/actions/categories";
 import { CategoriesClient } from "@/components/admin/categories/categories-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAdmin } from "@/lib/auth/server";
 
 interface CategoriesPageProps {
   searchParams: Promise<{
@@ -47,6 +48,7 @@ function CategoriesLoading() {
 export default async function CategoriesPage({
   searchParams,
 }: CategoriesPageProps) {
+  await requireAdmin();
   return (
     <div className="p-6">
       <Suspense fallback={<CategoriesLoading />}>

@@ -16,6 +16,7 @@ import {
   type StockAdjustmentFormData,
   type BulkStockAdjustmentFormData,
 } from "@/lib/validations/inventory";
+import { requireAdmin } from "@/lib/auth/server";
 
 /**
  * Get inventory overview with stock levels
@@ -102,6 +103,7 @@ export async function getInventoryOverview(filters?: {
  * Adjust stock for a product size
  */
 export async function adjustStock(data: StockAdjustmentFormData) {
+  await requireAdmin();
   try {
     const validatedData = stockAdjustmentSchema.parse(data);
 
@@ -171,6 +173,7 @@ export async function adjustStock(data: StockAdjustmentFormData) {
  * Bulk adjust stock for multiple product sizes
  */
 export async function bulkAdjustStock(data: BulkStockAdjustmentFormData) {
+  await requireAdmin();
   try {
     const validatedData = bulkStockAdjustmentSchema.parse(data);
 

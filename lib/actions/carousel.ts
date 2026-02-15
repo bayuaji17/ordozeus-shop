@@ -15,6 +15,7 @@ import {
   type DeleteCarouselData,
 } from "@/lib/validations/carousel";
 import { deleteFromR2 } from "@/lib/r2";
+import { requireAdmin } from "@/lib/auth/server";
 
 export type CarouselStatus = "active" | "inactive" | "scheduled";
 
@@ -153,6 +154,7 @@ export async function getCarouselById(id: string) {
  * Create new carousel item
  */
 export async function createCarousel(data: CarouselFormData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = carouselSchema.parse(data);
@@ -223,6 +225,7 @@ export async function createCarousel(data: CarouselFormData) {
  * Update existing carousel item
  */
 export async function updateCarousel(id: string, data: CarouselFormData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = carouselSchema.parse(data);
@@ -294,6 +297,7 @@ export async function updateCarousel(id: string, data: CarouselFormData) {
  * Delete carousel item
  */
 export async function deleteCarousel(data: DeleteCarouselData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = deleteCarouselSchema.parse(data);
@@ -346,6 +350,7 @@ export async function deleteCarousel(data: DeleteCarouselData) {
  * Update carousel display order
  */
 export async function updateCarouselOrder(data: UpdateCarouselOrderData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = updateCarouselOrderSchema.parse(data);
@@ -386,6 +391,7 @@ export async function updateCarouselOrder(data: UpdateCarouselOrderData) {
  * Toggle carousel status
  */
 export async function toggleCarouselStatus(data: ToggleCarouselStatusData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = toggleCarouselStatusSchema.parse(data);

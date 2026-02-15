@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { requireAdmin } from "@/lib/auth/server";
 
 async function NewProductContent() {
   const [categories, { all: availableSizes }] = await Promise.all([
@@ -37,7 +38,8 @@ function NewProductSkeleton() {
   );
 }
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  await requireAdmin();
   return (
     <div className="p-6">
       <div className="flex flex-col gap-2">

@@ -1,6 +1,8 @@
 import { CarouselForm } from "@/components/admin/carousel/carousel-form";
+import { requireAdmin } from "@/lib/auth/server";
 
-export default function NewCarouselPage() {
+export default async function NewCarouselPage() {
+  await requireAdmin();
   return (
     <div className="p-6 space-y-6">
       {/* Header */}

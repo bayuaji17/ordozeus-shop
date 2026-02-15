@@ -5,6 +5,7 @@ import {
 } from "@/lib/actions/inventory";
 import { InventoryClient } from "@/components/admin/inventory/inventory-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAdmin } from "@/lib/auth/server";
 
 interface InventoryPageProps {
   searchParams: Promise<{
@@ -49,6 +50,7 @@ function InventoryLoading() {
 export default async function InventoryPage({
   searchParams,
 }: InventoryPageProps) {
+  await requireAdmin();
   return (
     <div className="p-6">
       <div className="mb-6">

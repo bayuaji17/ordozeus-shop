@@ -15,6 +15,7 @@ import {
   type DeleteImageFormData,
 } from "@/lib/validations/product-images";
 import { deleteFromR2 } from "@/lib/r2";
+import { requireAdmin } from "@/lib/auth/server";
 
 /**
  * Get all images for a product
@@ -37,6 +38,7 @@ export async function getProductImages(productId: string) {
  * Set an image as the primary image for a product
  */
 export async function setPrimaryImage(data: SetPrimaryImageFormData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = setPrimaryImageSchema.parse(data);
@@ -94,6 +96,7 @@ export async function setPrimaryImage(data: SetPrimaryImageFormData) {
  * Update the display order of images
  */
 export async function updateImageOrder(data: UpdateImageOrderFormData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = updateImageOrderSchema.parse(data);
@@ -140,6 +143,7 @@ export async function updateImageOrder(data: UpdateImageOrderFormData) {
  * Update image alt text
  */
 export async function updateImageAltText(data: UpdateImageAltTextFormData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = updateImageAltTextSchema.parse(data);
@@ -178,6 +182,7 @@ export async function updateImageAltText(data: UpdateImageAltTextFormData) {
  * Delete a product image
  */
 export async function deleteProductImage(data: DeleteImageFormData) {
+  await requireAdmin();
   try {
     // Validate input
     const validatedData = deleteImageSchema.parse(data);

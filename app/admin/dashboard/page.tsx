@@ -9,8 +9,10 @@ import { Package, Layers, Grid3x3, AlertTriangle } from "lucide-react";
 import { getDashboardStats } from "@/lib/actions/dashboard";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { requireAdmin } from "@/lib/auth/server";
 
 export default async function DashboardPage() {
+  await requireAdmin();
   const stats = await getDashboardStats();
 
   return (

@@ -15,12 +15,9 @@ export async function POST(request: NextRequest) {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
-
+    console.log(session, "session");
     if (!session || session.user.role !== "admin") {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Parse form data
@@ -30,10 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Validate file
     if (!file) {
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
     // Convert file to buffer
@@ -41,12 +35,12 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Validate image
-    const validation = await validateImage(buffer, CAROUSEL_VALIDATION.MAX_IMAGE_SIZE);
+    const validation = await validateImage(
+      buffer,
+      CAROUSEL_VALIDATION.MAX_IMAGE_SIZE,
+    );
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Optimize and convert to WebP
@@ -69,7 +63,7 @@ export async function POST(request: NextRequest) {
     const imageUrl = await uploadToR2(
       optimized.buffer,
       carouselKey,
-      "image/webp"
+      "image/webp",
     );
 
     return NextResponse.json({
@@ -86,8 +80,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error uploading carousel image:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to upload image" },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to upload image",
+      },
+      { status: 500 },
     );
   }
 }
@@ -104,10 +101,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!session || session.user.role !== "admin") {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -116,7 +110,7 @@ export async function DELETE(request: NextRequest) {
     if (!imageKey) {
       return NextResponse.json(
         { error: "Image key is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -131,7 +125,7 @@ export async function DELETE(request: NextRequest) {
     console.error("Error deleting carousel image:", error);
     return NextResponse.json(
       { error: "Failed to delete image" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { sizes, sizeTypes, productSizes } from "@/lib/db/schema";
 import { eq, and, ne, sql, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/auth/server";
 
 /**
  * Get all sizes from the master table, ordered by type sortOrder then size sortOrder
@@ -54,6 +55,7 @@ export async function createSize(data: {
   sizeTypeId: string;
   sortOrder: number;
 }) {
+  await requireAdmin();
   try {
     // Check sortOrder uniqueness within the same sizeTypeId
     const existingOrder = await db.query.sizes.findFirst({
@@ -101,6 +103,7 @@ export async function updateSize(
   id: string,
   data: { name?: string; sizeTypeId?: string; sortOrder?: number },
 ) {
+  await requireAdmin();
   try {
     const existing = await db.query.sizes.findFirst({
       where: eq(sizes.id, id),
@@ -156,6 +159,7 @@ export async function updateSize(
  * Delete a size (only if not used by any products)
  */
 export async function deleteSize(id: string) {
+  await requireAdmin();
   try {
     // Check if size is used by any products
     const usageCount = await db

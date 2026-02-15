@@ -4,6 +4,7 @@ import { getSizeTypes } from "@/lib/actions/size-types";
 import { SizeSettingsClient } from "@/components/admin/settings/size-settings-client";
 import { SizeTypeSettingsClient } from "@/components/admin/settings/size-type-settings-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAdmin } from "@/lib/auth/server";
 
 async function SettingsContent() {
   const [{ all, grouped }, sizeTypes] = await Promise.all([
@@ -35,6 +36,7 @@ function SettingsLoading() {
 }
 
 export default async function SettingsPage() {
+  await requireAdmin();
   return (
     <div className="p-6">
       <div className="space-y-6">

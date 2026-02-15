@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { sizeTypes, sizes } from "@/lib/db/schema";
 import { eq, sql, asc, and, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/auth/server";
 
 /**
  * Get all size types ordered by sortOrder, with size count per type
@@ -37,6 +38,7 @@ export async function createSizeType(data: {
   name: string;
   sortOrder: number;
 }) {
+  await requireAdmin();
   try {
     const nameLower = data.name.toLowerCase();
 
@@ -86,6 +88,7 @@ export async function updateSizeType(
   id: string,
   data: { name?: string; sortOrder?: number },
 ) {
+  await requireAdmin();
   try {
     const existing = await db.query.sizeTypes.findFirst({
       where: eq(sizeTypes.id, id),
@@ -147,6 +150,7 @@ export async function updateSizeType(
  * Delete a size type (only if no sizes reference it)
  */
 export async function deleteSizeType(id: string) {
+  await requireAdmin();
   try {
     const usageCount = await db
       .select({

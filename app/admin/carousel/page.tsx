@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CarouselCard } from "@/components/admin/carousel/carousel-card";
 import { getCarouselItems } from "@/lib/actions/carousel";
+import { requireAdmin } from "@/lib/auth/server";
 
 interface CarouselPageProps {
   searchParams: Promise<{
@@ -84,6 +85,7 @@ function CarouselListSkeleton() {
 export default async function CarouselPage({
   searchParams,
 }: CarouselPageProps) {
+  await requireAdmin();
   const params = await searchParams;
 
   return (

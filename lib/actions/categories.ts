@@ -9,6 +9,7 @@ import {
   type CategoryFormData,
 } from "@/lib/validations/category";
 import { deleteFromR2 } from "@/lib/r2";
+import { requireAdmin } from "@/lib/auth/server";
 
 /**
  * Get all categories with product counts and child counts
@@ -224,6 +225,7 @@ export async function getCategoryById(id: string) {
  * Create a new category
  */
 export async function createCategory(data: CategoryFormData) {
+  await requireAdmin();
   try {
     const validatedData = categorySchema.parse(data);
 
@@ -269,7 +271,7 @@ export async function createCategory(data: CategoryFormData) {
 
     revalidatePath("/admin/categories");
     revalidatePath("/admin/products/new");
-    revalidatePath("/admin/products/[id]/edit");
+    revalidatePath("/admin/products/[id]/edit", "page");
 
     return {
       success: true,
@@ -296,6 +298,7 @@ export async function createCategory(data: CategoryFormData) {
  * Update an existing category
  */
 export async function updateCategory(id: string, data: CategoryFormData) {
+  await requireAdmin();
   try {
     const validatedData = categorySchema.parse(data);
 
@@ -364,7 +367,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
 
     revalidatePath("/admin/categories");
     revalidatePath("/admin/products/new");
-    revalidatePath("/admin/products/[id]/edit");
+    revalidatePath("/admin/products/[id]/edit", "page");
 
     return {
       success: true,
@@ -391,6 +394,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
  * Delete a category (only if not used by any products and has no children)
  */
 export async function deleteCategory(id: string) {
+  await requireAdmin();
   try {
     const category = await db.query.categories.findFirst({
       where: eq(categories.id, id),
@@ -450,7 +454,7 @@ export async function deleteCategory(id: string) {
 
     revalidatePath("/admin/categories");
     revalidatePath("/admin/products/new");
-    revalidatePath("/admin/products/[id]/edit");
+    revalidatePath("/admin/products/[id]/edit", "page");
 
     return {
       success: true,
@@ -469,6 +473,7 @@ export async function deleteCategory(id: string) {
  * Toggle category active status
  */
 export async function toggleCategoryStatus(id: string, isActive: boolean) {
+  await requireAdmin();
   try {
     const category = await db.query.categories.findFirst({
       where: eq(categories.id, id),

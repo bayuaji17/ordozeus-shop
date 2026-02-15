@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth/server";
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -80,6 +81,7 @@ async function ProductsContent({ searchParams }: ProductsPageProps) {
 export default async function ProductsPage({
   searchParams,
 }: ProductsPageProps) {
+  await requireAdmin();
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

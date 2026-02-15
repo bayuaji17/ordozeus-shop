@@ -188,8 +188,10 @@ export async function createCarousel(data: CarouselFormData) {
       status: validatedData.status,
       startDate: validatedData.startDate ?? null,
       endDate: validatedData.endDate ?? null,
-      backgroundColor: validatedData.backgroundColor ?? null,
+      titleColor: validatedData.titleColor ?? null,
       textColor: validatedData.textColor ?? null,
+      buttonBackgroundColor: validatedData.buttonBackgroundColor ?? null,
+      buttonTextColor: validatedData.buttonTextColor ?? null,
     } satisfies typeof carousels.$inferInsert;
 
     // Create carousel
@@ -257,8 +259,10 @@ export async function updateCarousel(id: string, data: CarouselFormData) {
       status: validatedData.status,
       startDate: validatedData.startDate ?? null,
       endDate: validatedData.endDate ?? null,
-      backgroundColor: validatedData.backgroundColor ?? null,
+      titleColor: validatedData.titleColor ?? null,
       textColor: validatedData.textColor ?? null,
+      buttonBackgroundColor: validatedData.buttonBackgroundColor ?? null,
+      buttonTextColor: validatedData.buttonTextColor ?? null,
       updatedAt: new Date(),
     };
 

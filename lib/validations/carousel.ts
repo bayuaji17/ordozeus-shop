@@ -36,7 +36,7 @@ export const carouselSchema = z
       .optional()
       .nullable(),
 
-    imageUrl: z.string().url("Invalid image URL").optional(),
+    imageUrl: z.url("Invalid image URL").optional(),
     imageKey: z.string().optional(),
 
     ctaText: z
@@ -46,7 +46,6 @@ export const carouselSchema = z
       .nullable(),
 
     ctaLink: z
-      .string()
       .url("Invalid URL format")
       .max(500, "URL must be 500 characters or less")
       .optional()
@@ -68,17 +67,33 @@ export const carouselSchema = z
     startDate: z.date().optional().nullable(),
     endDate: z.date().optional().nullable(),
 
-    backgroundColor: z
+    titleColor: z
       .string()
-      .max(50, "Color must be 50 characters or less")
+      .regex(/^$|^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color (e.g., #FF5733)")
       .optional()
-      .nullable(),
+      .nullable()
+      .transform((val) => (val === "" ? null : val)),
 
     textColor: z
       .string()
-      .max(50, "Color must be 50 characters or less")
+      .regex(/^$|^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color (e.g., #FF5733)")
       .optional()
-      .nullable(),
+      .nullable()
+      .transform((val) => (val === "" ? null : val)),
+
+    buttonBackgroundColor: z
+      .string()
+      .regex(/^$|^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color (e.g., #FF5733)")
+      .optional()
+      .nullable()
+      .transform((val) => (val === "" ? null : val)),
+
+    buttonTextColor: z
+      .string()
+      .regex(/^$|^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color (e.g., #FF5733)")
+      .optional()
+      .nullable()
+      .transform((val) => (val === "" ? null : val)),
   })
   .refine(
     (data) => {
@@ -110,7 +125,7 @@ export const carouselImageSchema = z
  * Upload carousel image schema
  */
 export const uploadCarouselImageSchema = z.object({
-  carouselId: z.string().uuid("Invalid carousel ID").optional(),
+  carouselId: z.string("Invalid carousel ID").optional(),
   file: carouselImageSchema,
 });
 
@@ -133,7 +148,7 @@ export const updateCarouselOrderSchema = z.object({
   carouselOrders: z
     .array(
       z.object({
-        id: z.string().uuid("Invalid carousel ID"),
+        id: z.string("Invalid carousel ID"),
         displayOrder: z.number().int().min(0),
       }),
     )
@@ -144,14 +159,14 @@ export const updateCarouselOrderSchema = z.object({
  * Delete carousel schema
  */
 export const deleteCarouselSchema = z.object({
-  id: z.string().uuid("Invalid carousel ID"),
+  id: z.string("Invalid carousel ID"),
 });
 
 /**
  * Toggle carousel status schema
  */
 export const toggleCarouselStatusSchema = z.object({
-  id: z.string().uuid("Invalid carousel ID"),
+  id: z.string("Invalid carousel ID"),
   status: z.enum(["active", "inactive", "scheduled"]),
 });
 

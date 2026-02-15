@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -25,7 +25,9 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CarouselImageUpload } from "./carousel-image-upload";
+import { CarouselPreview } from "./carousel-preview";
 import { createCarousel, updateCarousel } from "@/lib/actions/carousel";
 import {
   carouselSchema,
@@ -78,9 +80,17 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
         ? new Date(initialData.startDate)
         : undefined,
       endDate: initialData?.endDate ? new Date(initialData.endDate) : undefined,
-      backgroundColor: initialData?.backgroundColor || "",
+      titleColor: initialData?.titleColor || "",
       textColor: initialData?.textColor || "",
+      buttonBackgroundColor: initialData?.buttonBackgroundColor || "",
+      buttonTextColor: initialData?.buttonTextColor || "",
     },
+  });
+
+  // Watch form values for live preview
+  const watchedValues = useWatch({
+    control: form.control,
+    defaultValue: form.getValues(),
   });
 
   const onSubmit = async (data: CarouselFormOutput) => {
@@ -131,8 +141,15 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-      {/* Image Upload */}
+    <Tabs defaultValue="form" className="w-full">
+      <TabsList className="mb-6">
+        <TabsTrigger value="form">Form</TabsTrigger>
+        <TabsTrigger value="preview">Preview</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="form">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Image Upload */}
       <Card>
         <CardHeader>
           <CardTitle>Carousel Image</CardTitle>
@@ -373,7 +390,7 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
                           disabled={(date) =>
                             date < new Date(new Date().setHours(0, 0, 0, 0))
                           }
-                          initialFocus
+                          autoFocus
                         />
                       </PopoverContent>
                     </Popover>
@@ -425,7 +442,7 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
                           disabled={(date) =>
                             date < new Date(new Date().setHours(0, 0, 0, 0))
                           }
-                          initialFocus
+                          autoFocus
                         />
                       </PopoverContent>
                     </Popover>
@@ -450,51 +467,56 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
         </CardHeader>
         <CardContent>
           <FieldGroup>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Controller
-                control={form.control}
-                name="backgroundColor"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="carousel-bg-color">
-                      Background Color
-                    </FieldLabel>
-                    <Input
-                      {...field}
-                      id="carousel-bg-color"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="#000000 or transparent"
-                      value={field.value || ""}
-                      disabled={isSubmitting}
-                    />
-                    <FieldDescription>
-                      Hex color or CSS color name
-                    </FieldDescription>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
+            {/* Content Colors Group */}
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                Content Colors
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Controller
+                  control={form.control}
+                  name="titleColor"
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="carousel-title-color">
+                        Title Color
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        id="carousel-title-color"
+                        type="color"
+                        aria-invalid={fieldState.invalid}
+                        value={field.value || "#000000"}
+                        disabled={isSubmitting}
+                      />
+                      <FieldDescription>
+                        Color for the carousel title
+                      </FieldDescription>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
 
-              <Controller
-                control={form.control}
-                name="textColor"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="carousel-text-color">
-                      Text Color
-                    </FieldLabel>
-                    <Input
-                      {...field}
-                      id="carousel-text-color"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="#ffffff"
-                      value={field.value || ""}
-                      disabled={isSubmitting}
-                    />
-                    <FieldDescription>
-                      Hex color or CSS color name
+                <Controller
+                  control={form.control}
+                  name="textColor"
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="carousel-text-color">
+                        Subtitle & Description
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        id="carousel-text-color"
+                        type="color"
+                        aria-invalid={fieldState.invalid}
+                        value={field.value || "#000000"}
+                        disabled={isSubmitting}
+                      />
+                      <FieldDescription>
+                        Color for subtitle and description
                     </FieldDescription>
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -502,6 +524,67 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
                   </Field>
                 )}
               />
+              </div>
+            </div>
+
+            {/* Button Colors Group */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                Button Colors
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Controller
+                  control={form.control}
+                  name="buttonBackgroundColor"
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="carousel-btn-bg-color">
+                        Button Background
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        id="carousel-btn-bg-color"
+                        type="color"
+                        aria-invalid={fieldState.invalid}
+                        value={field.value || "#000000"}
+                        disabled={isSubmitting}
+                      />
+                      <FieldDescription>
+                        Background color for the button
+                      </FieldDescription>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  control={form.control}
+                  name="buttonTextColor"
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="carousel-btn-text-color">
+                        Button Text
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        id="carousel-btn-text-color"
+                        type="color"
+                        aria-invalid={fieldState.invalid}
+                        value={field.value || "#000000"}
+                        disabled={isSubmitting}
+                      />
+                      <FieldDescription>
+                        Text color for the button
+                      </FieldDescription>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+              </div>
             </div>
           </FieldGroup>
         </CardContent>
@@ -527,6 +610,17 @@ export function CarouselForm({ mode, initialData }: CarouselFormProps) {
               : "Update Carousel"}
         </Button>
       </div>
-    </form>
+        </form>
+      </TabsContent>
+
+      <TabsContent value="preview">
+        <CarouselPreview
+          data={{
+            ...watchedValues,
+            imageUrl: imageData?.url,
+          }}
+        />
+      </TabsContent>
+    </Tabs>
   );
 }

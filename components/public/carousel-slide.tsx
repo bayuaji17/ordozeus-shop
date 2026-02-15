@@ -13,19 +13,16 @@ interface CarouselSlideProps {
     imageUrl: string;
     ctaText: string | null;
     ctaLink: string | null;
-    backgroundColor: string | null;
+    titleColor: string | null;
     textColor: string | null;
+    buttonBackgroundColor: string | null;
+    buttonTextColor: string | null;
   };
 }
 
 export function CarouselSlide({ slide }: CarouselSlideProps) {
-  const customStyle = {
-    backgroundColor: slide.backgroundColor || undefined,
-    color: slide.textColor || undefined,
-  };
-
   return (
-    <div className="relative h-[500px] md:h-[600px] lg:h-[700px] w-full overflow-hidden">
+    <div className="relative h-125 md:h-150 lg:h-175 w-full overflow-hidden">
       {/* Background Image */}
       <Image
         src={slide.imageUrl}
@@ -38,16 +35,16 @@ export function CarouselSlide({ slide }: CarouselSlideProps) {
       />
 
       {/* Overlay Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/40 to-transparent" />
 
       {/* Content */}
       <div className="absolute inset-0 flex items-center">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className="max-w-2xl space-y-4 md:space-y-6" style={customStyle}>
+        <div className="container mx-auto px-4 md:px-6 lg:px-20">
+          <div className="max-w-2xl space-y-4 md:space-y-6">
             {/* Title */}
             <h1
               className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
-              style={{ color: slide.textColor || 'white' }}
+              style={{ color: slide.titleColor || "white" }}
             >
               {slide.title}
             </h1>
@@ -56,7 +53,7 @@ export function CarouselSlide({ slide }: CarouselSlideProps) {
             {slide.subtitle && (
               <p
                 className="text-xl md:text-2xl lg:text-3xl font-medium"
-                style={{ color: slide.textColor || 'white', opacity: 0.9 }}
+                style={{ color: slide.textColor || "white" }}
               >
                 {slide.subtitle}
               </p>
@@ -66,7 +63,7 @@ export function CarouselSlide({ slide }: CarouselSlideProps) {
             {slide.description && (
               <p
                 className="text-base md:text-lg lg:text-xl max-w-xl"
-                style={{ color: slide.textColor || 'white', opacity: 0.85 }}
+                style={{ color: slide.textColor || "white" }}
               >
                 {slide.description}
               </p>
@@ -78,11 +75,13 @@ export function CarouselSlide({ slide }: CarouselSlideProps) {
                 <Button
                   asChild
                   size="lg"
-                  className="text-base md:text-lg px-8 py-6"
+                  className="text-base md:text-lg px-8 py-6 border-0"
+                  style={{
+                    backgroundColor: slide.buttonBackgroundColor || undefined,
+                    color: slide.buttonTextColor || undefined,
+                  }}
                 >
-                  <Link href={slide.ctaLink}>
-                    {slide.ctaText}
-                  </Link>
+                  <Link href={slide.ctaLink}>{slide.ctaText}</Link>
                 </Button>
               </div>
             )}

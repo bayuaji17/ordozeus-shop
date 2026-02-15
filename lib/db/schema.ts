@@ -281,8 +281,10 @@ export const carousels = pgTable("carousels", {
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
 
-  backgroundColor: varchar("background_color", { length: 50 }),
-  textColor: varchar("text_color", { length: 50 }),
+  titleColor: varchar("title_color", { length: 7 }),
+  textColor: varchar("text_color", { length: 7 }),
+  buttonBackgroundColor: varchar("button_background_color", { length: 7 }),
+  buttonTextColor: varchar("button_text_color", { length: 7 }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

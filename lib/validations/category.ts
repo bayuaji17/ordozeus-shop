@@ -19,16 +19,16 @@ export const categorySchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug must contain only lowercase letters, numbers, and hyphens",
     ),
-  parentId: z.string().uuid().nullable(),
+  parentId: z.uuid().nullable(),
   displayOrder: z.number().int().min(0),
-  imageUrl: z.string().url().nullable().optional(),
+  imageUrl: z.url().nullable().optional(),
   imageKey: z.string().nullable().optional(),
   icon: z.string().max(100).nullable().optional(),
   isActive: z.boolean(),
 });
 
 export const updateCategorySchema = categorySchema.partial().extend({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 // Type exports

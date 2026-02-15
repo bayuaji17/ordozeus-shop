@@ -17,8 +17,10 @@ interface HeroCarouselProps {
     imageUrl: string;
     ctaText: string | null;
     ctaLink: string | null;
-    backgroundColor: string | null;
+    titleColor: string | null;
     textColor: string | null;
+    buttonBackgroundColor: string | null;
+    buttonTextColor: string | null;
     displayOrder: number;
   }>;
 }

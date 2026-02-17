@@ -43,7 +43,7 @@ export default function SignInPage() {
     checkAdmin();
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
@@ -60,7 +60,6 @@ export default function SignInPage() {
         return;
       }
 
-      // Use window.location for a clean redirect after sign-in
       window.location.href = "/admin";
     } catch {
       setError("An unexpected error occurred");
@@ -73,9 +72,7 @@ export default function SignInPage() {
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              Checking system status...
-            </p>
+            <p className="text-center text-muted-foreground">Loading...</p>
           </CardContent>
         </Card>
       </div>

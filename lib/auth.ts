@@ -15,14 +15,16 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: false,
+    autoSignIn: false,
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
-    cookieCache: {
-      enabled: true,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    },
+    // cookieCache: {
+    //   enabled: true,
+    //   maxAge: 60 * 60 * 24 * 7, // 7 days
+    // },
   },
   user: {
     additionalFields: {

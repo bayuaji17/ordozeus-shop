@@ -2,14 +2,14 @@ import { HeroCarousel } from "@/components/public/hero-carousel";
 import { FeaturedProducts } from "@/components/public/featured-products";
 import { CollectionsSection } from "@/components/public/collections-section";
 import { getActiveCarouselItems } from "@/lib/actions/carousel";
-import { getFeaturedProducts, getCollectionCategories } from "@/lib/actions/home";
+import { getFeaturedProducts, getRootCategoriesWithChildren } from "@/lib/actions/home";
 
 export default async function Home() {
   // Fetch data in parallel
   const [carouselSlides, featuredProducts, collectionCategories] = await Promise.all([
     getActiveCarouselItems(),
     getFeaturedProducts(8),
-    getCollectionCategories(4),
+    getRootCategoriesWithChildren(8),
   ]);
 
   return (

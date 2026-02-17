@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, ShoppingBag, User, Menu } from "lucide-react";
+import { Search, ShoppingBag, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -11,8 +11,6 @@ import {
 const navLinks = [
   { label: "Shop", href: "/products" },
   { label: "Collections", href: "/collections" },
-  { label: "New Arrivals", href: "/products?sort=newest" },
-  { label: "About", href: "/about" },
 ];
 
 export function Header() {
@@ -76,11 +74,6 @@ export function Header() {
             <Button variant="ghost" size="icon" className="hidden sm:flex">
               <Search className="h-5 w-5" />
               <span className="sr-only">Search</span>
-            </Button>
-            
-            <Button variant="ghost" size="icon" className="hidden sm:flex">
-              <User className="h-5 w-5" />
-              <span className="sr-only">Account</span>
             </Button>
             
             <Button variant="ghost" size="icon" className="relative">

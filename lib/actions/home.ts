@@ -141,3 +141,88 @@ export async function getCollectionCategories(limit: number = 4): Promise<Collec
     return [];
   }
 }
+
+export interface CategoryWithChildren {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string | null;
+  children: {
+    id: string;
+    name: string;
+    slug: string;
+  }[];
+}
+
+/**
+ * Get root categories (Level 1) with their Level 2 children
+ */
+export async function getRootCategoriesWithChildren(limit: number = 8): Promise<CategoryWithChildren[]> {
+  try {
+    // Get all active root categories (Level 1)
+    const rootCategories = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        imageUrl: categories.imageUrl,
+      })
+      .from(categories)
+      .where(
+        and(
+          eq(categories.level, 1),
+          eq(categories.isActive, true)
+        )
+      )
+      .orderBy(asc(categories.displayOrder))
+      .limit(limit);
+
+    if (rootCategories.length === 0) {
+      return [];
+    }
+
+    // Get Level 2 children for each root category
+    const rootCategoryIds = rootCategories.map((cat) => cat.id);
+    
+    const childrenResult = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        parentId: categories.parentId,
+      })
+      .from(categories)
+      .where(
+        and(
+          sql`${categories.parentId} IN ${rootCategoryIds}`,
+          eq(categories.level, 2),
+          eq(categories.isActive, true)
+        )
+      )
+      .orderBy(asc(categories.displayOrder));
+
+    // Group children by parent
+    const childrenByParent = childrenResult.reduce((acc, child) => {
+      const parentId = child.parentId;
+      if (!parentId) return acc;
+      if (!acc[parentId]) {
+        acc[parentId] = [];
+      }
+      acc[parentId].push({
+        id: child.id,
+        name: child.name,
+        slug: child.slug,
+      });
+      return acc;
+    }, {} as Record<string, { id: string; name: string; slug: string }[]>);
+
+    // Combine root categories with their children
+    return rootCategories.map((category) => ({
+      ...category,
+      children: childrenByParent[category.id] || [],
+    }));
+  } catch (error) {
+    console.error("Error fetching root categories with children:", error);
+    return [];
+  }
+}

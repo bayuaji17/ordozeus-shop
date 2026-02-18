@@ -12,15 +12,17 @@ import { PER_PAGE_OPTIONS } from "@/lib/types/shop";
 interface PerPageSelectorProps {
   value: number;
   onChange: (value: number) => void;
+  disabled?: boolean;
 }
 
-export function PerPageSelector({ value, onChange }: PerPageSelectorProps) {
+export function PerPageSelector({ value, onChange, disabled = false }: PerPageSelectorProps) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-slate-500 hidden sm:inline">Show:</span>
       <Select
         value={value.toString()}
         onValueChange={(val) => onChange(parseInt(val))}
+        disabled={disabled}
       >
         <SelectTrigger className="w-[80px]">
           <SelectValue>{value}</SelectValue>

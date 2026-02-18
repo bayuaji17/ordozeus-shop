@@ -7,12 +7,14 @@ interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  disabled?: boolean;
 }
 
 export function Pagination({
   currentPage,
   totalPages,
   onPageChange,
+  disabled = false,
 }: PaginationProps) {
   const getVisiblePages = () => {
     const pages: (number | string)[] = [];
@@ -60,7 +62,7 @@ export function Pagination({
         variant="outline"
         size="icon"
         onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
+        disabled={disabled || currentPage === 1}
         className="h-9 w-9"
       >
         <ChevronLeft className="h-4 w-4" />
@@ -76,6 +78,7 @@ export function Pagination({
                 variant={currentPage === page ? "default" : "outline"}
                 size="icon"
                 onClick={() => onPageChange(page as number)}
+                disabled={disabled}
                 className={`h-9 w-9 ${
                   currentPage === page
                     ? "bg-black text-white hover:bg-slate-800"
@@ -93,7 +96,7 @@ export function Pagination({
         variant="outline"
         size="icon"
         onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
+        disabled={disabled || currentPage === totalPages}
         className="h-9 w-9"
       >
         <ChevronRight className="h-4 w-4" />

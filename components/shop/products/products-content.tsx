@@ -1,6 +1,7 @@
 "use client";
 
-import { usePendingFilters } from "@/lib/hooks/use-pending-filters";
+import { useTransition, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCardShop } from "@/components/shop/product-card-shop";
 import { CategoryFilter } from "@/components/shop/filters/category-filter";
 import { PriceFilter } from "@/components/shop/filters/price-filter";
@@ -13,6 +14,7 @@ import { PerPageSelector } from "@/components/shop/sorting/per-page-selector";
 import { Pagination } from "@/components/shop/pagination/pagination";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { useProductFilters } from "@/lib/hooks/use-product-filters";
 import { SORT_OPTIONS } from "@/lib/types/shop";
 import type { ShopProductsResponse, CategoryNode } from "@/lib/types/shop";
 
@@ -25,6 +27,10 @@ export function ProductsContent({
   initialProducts,
   categories,
 }: ProductsContentProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
   const {
     appliedFilters,
     pendingFilters,
@@ -35,28 +41,79 @@ export function ProductsContent({
     clearAllFilters,
     debouncedSearch,
     setDebouncedSearch,
-    setSort,
-    setPage,
-    setPerPage,
+    validationErrors,
     hasPendingChanges,
     pendingChangesCount,
-    validationErrors,
     activeFiltersCount,
-  } = usePendingFilters();
+  } = useProductFilters();
 
   const { products, pagination } = initialProducts;
 
-  const handleSortChange = (value: string) => {
-    const option = SORT_OPTIONS.find((opt) => opt.value === value);
-    if (option) {
-      setSort(option.sortBy, option.sortOrder);
-    }
-  };
+  // Handle sort with transition for loading state
+  const handleSortChange = useCallback(
+    (value: string) => {
+      const option = SORT_OPTIONS.find((opt) => opt.value === value);
+      if (!option) return;
+
+      const params = new URLSearchParams(searchParams.toString());
+      if (option.sortBy !== "date") {
+        params.set("sortBy", option.sortBy);
+      } else {
+        params.delete("sortBy");
+      }
+      if (option.sortOrder !== "desc") {
+        params.set("sortOrder", option.sortOrder);
+      } else {
+        params.delete("sortOrder");
+      }
+
+      startTransition(() => {
+        router.push(`/products?${params.toString()}`, { scroll: false });
+      });
+    },
+    [router, searchParams]
+  );
+
+  // Handle page change with transition
+  const handlePageChange = useCallback(
+    (page: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (page !== 1) {
+        params.set("page", page.toString());
+      } else {
+        params.delete("page");
+      }
+
+      startTransition(() => {
+        router.push(`/products?${params.toString()}`, { scroll: false });
+      });
+    },
+    [router, searchParams]
+  );
+
+  // Handle per page change with transition
+  const handlePerPageChange = useCallback(
+    (perPage: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (perPage !== 12) {
+        params.set("perPage", perPage.toString());
+      } else {
+        params.delete("perPage");
+      }
+      params.set("page", "1");
+
+      startTransition(() => {
+        router.push(`/products?${params.toString()}`, { scroll: false });
+      });
+    },
+    [router, searchParams]
+  );
 
   const currentSortValue =
     SORT_OPTIONS.find(
       (option) =>
-        option.sortBy === appliedFilters.sortBy && option.sortOrder === appliedFilters.sortOrder
+        option.sortBy === appliedFilters.sortBy &&
+        option.sortOrder === appliedFilters.sortOrder
     )?.value || "date-desc";
 
   return (
@@ -94,7 +151,7 @@ export function ProductsContent({
 
           <Separator />
 
-          {/* Price Filter - Manual range, no server fetch */}
+          {/* Price Filter */}
           <PriceFilter
             minPrice={0}
             maxPrice={10000000}
@@ -137,12 +194,14 @@ export function ProductsContent({
               <SortDropdown
                 value={currentSortValue}
                 onChange={handleSortChange}
+                disabled={isPending}
               />
 
               <div className="hidden sm:block">
                 <PerPageSelector
                   value={appliedFilters.perPage}
-                  onChange={setPerPage}
+                  onChange={handlePerPageChange}
+                  disabled={isPending}
                 />
               </div>
             </div>
@@ -155,14 +214,14 @@ export function ProductsContent({
             priceMax={appliedFilters.priceMax}
             search={appliedFilters.search}
             categories={categories}
-            onClearCategory={(id) => {
-              // Toggle to remove from applied
-              toggleCategory(id);
-              applyFilters();
+            onClearCategory={(slug) => {
+              toggleCategory(slug);
+              // Use setTimeout to allow state to update before applying
+              setTimeout(() => applyFilters(), 0);
             }}
             onClearPriceRange={() => {
               setPriceRange(null, null);
-              applyFilters();
+              setTimeout(() => applyFilters(), 0);
             }}
             onClearSearch={() => setDebouncedSearch("")}
             onClearAll={clearAllFilters}
@@ -171,40 +230,55 @@ export function ProductsContent({
           {/* Results Count */}
           <div className="flex items-center justify-between text-sm text-slate-500">
             <span>
-              Showing {(pagination.page - 1) * pagination.perPage + 1} -{" "}
-              {Math.min(
-                pagination.page * pagination.perPage,
-                pagination.total
-              )}{" "}
-              of {pagination.total} products
+              {isPending ? (
+                "Updating..."
+              ) : (
+                <>
+                  Showing {(pagination.page - 1) * pagination.perPage + 1} -{" "}
+                  {Math.min(
+                    pagination.page * pagination.perPage,
+                    pagination.total
+                  )}{" "}
+                  of {pagination.total} products
+                </>
+              )}
             </span>
 
             <div className="sm:hidden">
               <PerPageSelector
                 value={appliedFilters.perPage}
-                onChange={setPerPage}
+                onChange={handlePerPageChange}
+                disabled={isPending}
               />
             </div>
           </div>
         </div>
 
-        {/* Product Grid */}
-        {products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCardShop key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <p className="text-lg font-medium text-slate-900 mb-2">
-              No products found
-            </p>
-            <p className="text-slate-500">
-              Try adjusting your filters or search terms
-            </p>
-          </div>
-        )}
+        {/* Product Grid with loading overlay */}
+        <div className="relative">
+          {isPending && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-start justify-center pt-20">
+              <div className="h-8 w-8 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {products.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <ProductCardShop key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <p className="text-lg font-medium text-slate-900 mb-2">
+                No products found
+              </p>
+              <p className="text-slate-500">
+                Try adjusting your filters or search terms
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
@@ -212,7 +286,8 @@ export function ProductsContent({
             <Pagination
               currentPage={pagination.page}
               totalPages={pagination.totalPages}
-              onPageChange={setPage}
+              onPageChange={handlePageChange}
+              disabled={isPending}
             />
           </div>
         )}

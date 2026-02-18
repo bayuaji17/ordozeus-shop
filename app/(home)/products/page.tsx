@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getShopProducts, getCategoriesWithCounts } from "@/lib/actions/shop";
-import { ProductsContent } from "./products-content";
-import { ProductsSkeleton } from "./products-skeleton";
+import { ProductsContent } from "@/components/shop/products/products-content";
+import { ProductsSkeleton } from "@/components/shop/products/products-skeleton";
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -30,8 +30,8 @@ export default async function ProductsPage({
     search: params.search || "",
     sortBy: (params.sortBy as "name" | "price" | "date") || "date",
     sortOrder: (params.sortOrder as "asc" | "desc") || "desc",
-    page: parseInt(params.page || "1"),
-    perPage: parseInt(params.perPage || "12"),
+    page: Math.max(1, parseInt(params.page || "1")),
+    perPage: Math.max(1, parseInt(params.perPage || "12")),
   };
 
   // Fetch data in parallel

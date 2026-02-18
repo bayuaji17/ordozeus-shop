@@ -13,15 +13,16 @@ import { SORT_OPTIONS } from "@/lib/types/shop";
 interface SortDropdownProps {
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export function SortDropdown({ value, onChange }: SortDropdownProps) {
+export function SortDropdown({ value, onChange, disabled = false }: SortDropdownProps) {
   const selectedOption = SORT_OPTIONS.find((opt) => opt.value === value);
 
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-slate-500 hidden sm:inline">Sort by:</span>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger className="w-[160px] sm:w-[180px]">
           <SelectValue placeholder="Sort by...">
             {selectedOption?.label || "Sort by..."}

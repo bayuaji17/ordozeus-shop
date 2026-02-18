@@ -1,6 +1,5 @@
 "use client";
 
-import { Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,11 +27,6 @@ function CategoryNodeItem({
 }) {
   const isSelected = selectedCategories.includes(node.slug);
   const hasChildren = node.children.length > 0;
-  
-  // Count selected children
-  const selectedChildrenCount = node.children.filter(child => 
-    selectedCategories.includes(child.slug)
-  ).length;
 
   if (!hasChildren) {
     return (
@@ -66,9 +60,6 @@ function CategoryNodeItem({
         <AccordionTrigger className="py-0 hover:no-underline flex-1 justify-start gap-2 [&[data-state=open]>svg]:rotate-180">
           <span className="font-medium text-sm">{node.name}</span>
           <span className="text-slate-400 text-sm">({node.productCount})</span>
-          {selectedChildrenCount > 0 && (
-            <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
-          )}
         </AccordionTrigger>
       </div>
       <AccordionContent>
@@ -93,7 +84,7 @@ export function CategoryFilter({
   onToggle,
 }: CategoryFilterProps) {
   // Default expanded: first level categories (using slugs)
-  const defaultExpanded = categories.map(cat => cat.slug);
+  const defaultExpanded = categories.map((cat) => cat.slug);
 
   return (
     <div className="space-y-3">
@@ -101,7 +92,11 @@ export function CategoryFilter({
         <h3 className="font-semibold text-slate-900">Categories</h3>
       </div>
 
-      <Accordion type="multiple" defaultValue={defaultExpanded} className="space-y-1">
+      <Accordion
+        type="multiple"
+        defaultValue={defaultExpanded}
+        className="space-y-1"
+      >
         {categories.map((category) => (
           <CategoryNodeItem
             key={category.slug}

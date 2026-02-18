@@ -21,6 +21,8 @@ interface MobileFilterDrawerProps {
   pendingCategories: string[];
   pendingPriceMin: number | null;
   pendingPriceMax: number | null;
+  appliedPriceMin: number | null;
+  appliedPriceMax: number | null;
   minPrice: number;
   maxPrice: number;
   appliedFiltersCount: number;
@@ -38,6 +40,8 @@ export function MobileFilterDrawer({
   pendingCategories,
   pendingPriceMin,
   pendingPriceMax,
+  appliedPriceMin,
+  appliedPriceMax,
   minPrice,
   maxPrice,
   appliedFiltersCount,
@@ -100,8 +104,10 @@ export function MobileFilterDrawer({
           <PriceFilter
             minPrice={minPrice}
             maxPrice={maxPrice}
-            currentMin={pendingPriceMin}
-            currentMax={pendingPriceMax}
+            currentMin={appliedPriceMin}
+            currentMax={appliedPriceMax}
+            pendingMin={pendingPriceMin}
+            pendingMax={pendingPriceMax}
             onChange={onPriceChange}
             validationErrors={validationErrors}
           />

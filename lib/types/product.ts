@@ -70,7 +70,6 @@ export interface ProductImageFull {
   width: number | null;
   height: number | null;
   altText: string | null;
-  displayOrder: number;
   isPrimary: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -84,7 +83,6 @@ export interface ProductImage {
   url: string;
   key: string;
   altText: string | null;
-  displayOrder: number;
   isPrimary: boolean;
 }
 
@@ -115,7 +113,6 @@ export interface ProductBase extends WithStatus<ProductStatus> {
   description: string | null;
   basePrice: number;
   isFeatured: boolean;
-  displayOrder: number;
 }
 
 /**

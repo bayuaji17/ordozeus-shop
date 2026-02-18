@@ -69,22 +69,10 @@ export function useProductFilters() {
     FilterValidationError[]
   >([]);
 
-  // Track search input locally for UI responsiveness, synced with URL
-  const [searchInput, setSearchInput] = useState(appliedFilters.search);
+  // Track search input locally for UI responsiveness
+  // Key is used to reset the input when URL changes externally (force remount)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isUpdatingFromUrlRef = useRef(false);
-
-  // Sync search input when URL changes from external sources (clear button, back button)
-  useEffect(() => {
-    if (!isUpdatingFromUrlRef.current && appliedFilters.search !== searchInput) {
-      isUpdatingFromUrlRef.current = true;
-      setSearchInput(appliedFilters.search);
-      // Reset flag after state update is scheduled
-      setTimeout(() => {
-        isUpdatingFromUrlRef.current = false;
-      }, 0);
-    }
-  }, [appliedFilters.search]);
+  const lastUrlSearchRef = useRef(appliedFilters.search);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -247,8 +235,7 @@ export function useProductFilters() {
   const clearAllFilters = useCallback(() => {
     const params = new URLSearchParams();
 
-    // Keep only search, sort, perPage if they exist
-    if (appliedFilters.search) params.set("search", appliedFilters.search);
+    // Keep only sort, perPage if they exist (search is cleared)
     if (appliedFilters.sortBy !== "date")
       params.set("sortBy", appliedFilters.sortBy);
     if (appliedFilters.sortOrder !== "desc")
@@ -273,10 +260,6 @@ export function useProductFilters() {
   // Debounced search - updates URL after DEBOUNCE_MS delay
   const handleSearchChange = useCallback(
     (value: string) => {
-      // Update local state immediately for UI responsiveness
-      setSearchInput(value);
-      isUpdatingFromUrlRef.current = false;
-
       // Clear previous timeout
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
@@ -292,6 +275,9 @@ export function useProductFilters() {
         }
         params.set("page", "1");
 
+        // Track that we're about to change URL
+        lastUrlSearchRef.current = value.trim();
+
         startTransition(() => {
           router.push(`/products?${params.toString()}`, { scroll: false });
         });
@@ -299,6 +285,25 @@ export function useProductFilters() {
     },
     [router, searchParams]
   );
+
+  // Immediate search update - for explicit clear actions (not debounced)
+  const clearSearch = useCallback(() => {
+    // Clear any pending debounced search
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("search");
+    params.set("page", "1");
+
+    lastUrlSearchRef.current = "";
+
+    startTransition(() => {
+      router.push(`/products?${params.toString()}`, { scroll: false });
+    });
+  }, [router, searchParams]);
 
   // Active filters count
   const activeFiltersCount = useMemo(() => {
@@ -324,8 +329,8 @@ export function useProductFilters() {
     resetPending,
     clearAllFilters,
     // Search
-    debouncedSearch: searchInput,
     setDebouncedSearch: handleSearchChange,
+    clearSearch,
     // State
     hasPendingChanges,
     pendingChangesCount,

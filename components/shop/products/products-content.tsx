@@ -39,8 +39,8 @@ export function ProductsContent({
     applyFilters,
     resetPending,
     clearAllFilters,
-    debouncedSearch,
     setDebouncedSearch,
+    clearSearch,
     validationErrors,
     hasPendingChanges,
     pendingChangesCount,
@@ -155,8 +155,10 @@ export function ProductsContent({
           <PriceFilter
             minPrice={0}
             maxPrice={10000000}
-            currentMin={pendingFilters.priceMin}
-            currentMax={pendingFilters.priceMax}
+            currentMin={appliedFilters.priceMin}
+            currentMax={appliedFilters.priceMax}
+            pendingMin={pendingFilters.priceMin}
+            pendingMax={pendingFilters.priceMax}
             onChange={setPriceRange}
             validationErrors={validationErrors}
           />
@@ -169,8 +171,10 @@ export function ProductsContent({
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <SearchBar
-              value={debouncedSearch}
+              key={`search-${appliedFilters.search}`}
+              value={appliedFilters.search}
               onChange={setDebouncedSearch}
+              onClear={clearSearch}
             />
 
             <div className="flex items-center gap-2">
@@ -179,6 +183,8 @@ export function ProductsContent({
                 pendingCategories={pendingFilters.categories}
                 pendingPriceMin={pendingFilters.priceMin}
                 pendingPriceMax={pendingFilters.priceMax}
+                appliedPriceMin={appliedFilters.priceMin}
+                appliedPriceMax={appliedFilters.priceMax}
                 minPrice={0}
                 maxPrice={10000000}
                 appliedFiltersCount={activeFiltersCount}
@@ -223,7 +229,7 @@ export function ProductsContent({
               setPriceRange(null, null);
               setTimeout(() => applyFilters(), 0);
             }}
-            onClearSearch={() => setDebouncedSearch("")}
+            onClearSearch={clearSearch}
             onClearAll={clearAllFilters}
           />
 

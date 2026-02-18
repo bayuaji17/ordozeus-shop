@@ -33,7 +33,6 @@ export const productSchema = z.object({
   basePrice: z.number().int().positive("Base price must be positive"),
   status: z.enum(["draft", "active", "archived"]),
   isFeatured: z.boolean(),
-  displayOrder: z.number().int().min(0),
   categoryIds: z.array(z.string().uuid()),
   sizes: z.array(productSizeSchema).min(1, "At least one size is required"),
 });

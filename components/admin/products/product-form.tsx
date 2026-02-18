@@ -140,7 +140,6 @@ export function ProductForm({
       basePrice: product?.basePrice ?? 0,
       status: product?.status ?? "draft",
       isFeatured: product?.isFeatured ?? false,
-      displayOrder: product?.displayOrder ?? 0,
       categoryIds:
         product?.productCategories?.map((pc) => pc.category.id) ?? [],
       sizes:

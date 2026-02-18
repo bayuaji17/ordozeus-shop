@@ -133,8 +133,6 @@ export const products = pgTable("products", {
 
   isFeatured: boolean("is_featured").default(false).notNull(),
 
-  displayOrder: integer("display_order").notNull().default(0),
-
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

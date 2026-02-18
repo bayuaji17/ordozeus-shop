@@ -90,14 +90,14 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
         </div>
       </div>
 
-      {/* Navigation Arrows - Show on hover */}
+      {/* Navigation Arrows - Mobile: bottom center, Desktop: left/right sides */}
       {slides.length > 1 && (
         <>
           <Button
             variant="ghost"
             size="icon"
             onClick={scrollPrev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute bottom-4 left-1/2 -translate-x-[calc(100%+0.5rem)] md:left-4 md:top-1/2 md:-translate-y-1/2 md:translate-x-0 h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white transition-opacity md:opacity-0 md:group-hover:opacity-100"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -107,7 +107,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
             variant="ghost"
             size="icon"
             onClick={scrollNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute bottom-4 left-1/2 translate-x-[0.5rem] md:right-4 md:left-auto md:top-1/2 md:-translate-y-1/2 h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white transition-opacity md:opacity-0 md:group-hover:opacity-100"
             aria-label="Next slide"
           >
             <ChevronRight className="h-6 w-6" />
@@ -117,7 +117,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
 
       {/* Navigation Dots */}
       {slides.length > 1 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        <div className="absolute bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
           {slides.map((_, index) => (
             <button
               key={index}

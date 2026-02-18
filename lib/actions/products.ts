@@ -50,7 +50,6 @@ export async function getProducts(filters: ProductFilters = {}) {
         description: products.description,
         basePrice: products.basePrice,
         isFeatured: products.isFeatured,
-        displayOrder: products.displayOrder,
         status: products.status,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
@@ -261,7 +260,6 @@ export async function createProduct(data: ProductFormData) {
           basePrice: validatedData.basePrice,
           status: validatedData.status,
           isFeatured: validatedData.isFeatured,
-          displayOrder: validatedData.displayOrder,
         })
         .returning();
 
@@ -370,7 +368,6 @@ export async function updateProduct(id: string, data: ProductFormData) {
           basePrice: validatedData.basePrice,
           status: validatedData.status,
           isFeatured: validatedData.isFeatured,
-          displayOrder: validatedData.displayOrder,
           updatedAt: new Date(),
         })
         .where(eq(products.id, id));

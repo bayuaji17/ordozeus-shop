@@ -35,7 +35,7 @@ export async function getFeaturedProducts(limit: number = 8): Promise<FeaturedPr
           eq(products.isFeatured, true)
         )
       )
-      .orderBy(asc(products.displayOrder), desc(products.createdAt))
+      .orderBy(desc(products.createdAt))
       .limit(limit);
 
     // Get primary images for these products

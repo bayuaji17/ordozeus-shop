@@ -44,18 +44,6 @@ export function ProductCardShop({ product }: ProductCardShopProps) {
     handleClose();
   };
 
-  const getStockLabel = (stock: number) => {
-    if (stock === 0) return "Out of Stock";
-    if (stock <= 5) return `${stock} left`;
-    return "In Stock";
-  };
-
-  const getStockColor = (stock: number) => {
-    if (stock === 0) return "text-red-500";
-    if (stock <= 5) return "text-amber-500";
-    return "text-green-600";
-  };
-
   return (
     <div className="group relative overflow-hidden rounded-2xl bg-white shadow-md h-full flex flex-col">
       {/* Image Container */}
@@ -166,7 +154,7 @@ export function ProductCardShop({ product }: ProductCardShopProps) {
                     <Label
                       htmlFor={size.id}
                       className={`
-                        flex flex-col items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all
+                        flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all
                         ${
                           isOutOfStock
                             ? "border-slate-200 bg-slate-50 opacity-50 grayscale cursor-not-allowed"
@@ -174,13 +162,8 @@ export function ProductCardShop({ product }: ProductCardShopProps) {
                         }
                       `}
                     >
-                      <span className="text-sm font-medium">{size.name}</span>
-                      <span
-                        className={`text-xs mt-0.5 ${isOutOfStock ? "text-red-500" : getStockColor(size.stock)}`}
-                      >
-                        {isOutOfStock
-                          ? "Out of Stock"
-                          : getStockLabel(size.stock)}
+                      <span className="text-sm font-medium uppercase">
+                        {size.name}
                       </span>
                     </Label>
                   </div>

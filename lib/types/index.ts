@@ -121,3 +121,20 @@ export type {
   CarouselSortField,
   CarouselOrderUpdate,
 } from "./carousel";
+
+// ============================================================================
+// Shop Types
+// ============================================================================
+export type {
+  ShopProduct,
+  ShopProductSize,
+  CategoryNode,
+  ShopFilters,
+  ShopPagination,
+  ShopProductsResponse,
+  SortOption,
+  PendingShopFilters,
+  FilterValidationError,
+} from "./shop";
+
+export { SORT_OPTIONS, PER_PAGE_OPTIONS } from "./shop";

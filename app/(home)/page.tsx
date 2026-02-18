@@ -1,32 +1,34 @@
 import { HeroCarousel } from "@/components/public/hero-carousel";
-import { FeaturedProducts } from "@/components/public/featured-products";
+import { FeaturedProductsCarousel } from "@/components/public/featured-products-carousel";
 import { CollectionsSection } from "@/components/public/collections-section";
 import { getActiveCarouselItems } from "@/lib/actions/carousel";
-import { getFeaturedProducts, getRootCategoriesWithChildren } from "@/lib/actions/home";
+import {
+  getFeaturedProducts,
+  getRootCategoriesWithChildren,
+} from "@/lib/actions/home";
 
 export default async function Home() {
   // Fetch data in parallel
-  const [carouselSlides, featuredProducts, collectionCategories] = await Promise.all([
-    getActiveCarouselItems(),
-    getFeaturedProducts(8),
-    getRootCategoriesWithChildren(8),
-  ]);
+  const [carouselSlides, featuredProducts, collectionCategories] =
+    await Promise.all([
+      getActiveCarouselItems(),
+      getFeaturedProducts(6),
+      getRootCategoriesWithChildren(8),
+    ]);
 
   return (
     <div>
       {/* Hero Carousel Section */}
-      {carouselSlides.length > 0 && (
-        <HeroCarousel slides={carouselSlides} />
-      )}
+      {carouselSlides.length > 0 && <HeroCarousel slides={carouselSlides} />}
 
-      {/* Featured Products Section */}
-      <FeaturedProducts products={featuredProducts} />
+      {/* Featured Products Carousel Section */}
+      <FeaturedProductsCarousel products={featuredProducts} />
 
       {/* Collections Section */}
       <CollectionsSection categories={collectionCategories} />
 
       {/* Brand Values Section */}
-      <section className="py-24 md:py-32">
+      {/*<section className="py-24 md:py-32">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
             <div className="text-center space-y-4">
@@ -66,7 +68,7 @@ export default async function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </section>*/}
     </div>
   );
 }

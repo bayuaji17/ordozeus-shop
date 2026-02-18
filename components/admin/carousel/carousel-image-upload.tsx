@@ -73,7 +73,6 @@ export function CarouselImageUpload({
       const result = await response.json();
 
       if (!response.ok) {
-        console.log(response, "response");
         throw new Error(result.error || "Failed to upload image");
       }
 

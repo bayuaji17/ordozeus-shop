@@ -19,10 +19,11 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
             Browse by Category
           </p>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight">
-            Collections
+            Find your perfect fit
           </h2>
           <p className="text-muted-foreground text-lg">
-            Explore our carefully curated collections designed for every style and occasion
+            Three distinct worlds, one coherent wardrobe. Browse by category and
+            discover pieces that speak to how you actually dress — every day.
           </p>
         </div>
 

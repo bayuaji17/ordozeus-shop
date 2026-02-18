@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
-    console.log(session, "session");
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

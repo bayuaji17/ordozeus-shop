@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Search, ShoppingBag, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,11 +9,30 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import { useCartStore } from "@/lib/stores/cart-store";
 
 const navLinks = [
   { label: "Shop", href: "/products" },
   { label: "Collections", href: "/collections" },
 ];
+
+function CartButton() {
+  const itemCount = useCartStore((state) => state.getItemCount());
+
+  return (
+    <Link href="/cart">
+      <Button variant="ghost" size="icon" className="relative">
+        <ShoppingBag className="h-5 w-5" />
+        <span className="sr-only">Cart</span>
+        {itemCount > 0 && (
+          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+            {itemCount > 99 ? "99+" : itemCount}
+          </span>
+        )}
+      </Button>
+    </Link>
+  );
+}
 
 export function Header() {
   return (
@@ -75,14 +96,8 @@ export function Header() {
               <Search className="h-5 w-5" />
               <span className="sr-only">Search</span>
             </Button>
-            
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingBag className="h-5 w-5" />
-              <span className="sr-only">Cart</span>
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-                0
-              </span>
-            </Button>
+
+            <CartButton />
           </div>
         </div>
       </div>

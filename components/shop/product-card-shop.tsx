@@ -3,11 +3,14 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ShoppingBag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/currency";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { showCartToast } from "@/lib/utils/toast";
 import type { ShopProduct } from "@/lib/types/shop";
 
 interface ProductCardShopProps {
@@ -15,6 +18,8 @@ interface ProductCardShopProps {
 }
 
 export function ProductCardShop({ product }: ProductCardShopProps) {
+  const router = useRouter();
+  const addItem = useCartStore((state) => state.addItem);
   const [showSizeSelector, setShowSizeSelector] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [actionType, setActionType] = useState<"buy" | "cart" | null>(null);
@@ -33,12 +38,46 @@ export function ProductCardShop({ product }: ProductCardShopProps) {
   const handleConfirm = () => {
     if (!selectedSize) return;
 
+    const size = product.sizes.find((s) => s.id === selectedSize);
+    if (!size) return;
+
     if (actionType === "buy") {
-      // TODO: Navigate to checkout with selected size
-      console.log("Buy now:", product.id, "size:", selectedSize);
+      // Add to cart and navigate to checkout
+      const added = addItem({
+        productId: product.id,
+        productSlug: product.slug,
+        name: product.name,
+        sizeId: size.id,
+        sizeName: size.name,
+        price: product.basePrice,
+        image: product.primaryImage,
+        maxStock: size.stock,
+      });
+
+      if (added) {
+        showCartToast.itemAdded(product.name);
+        router.push("/cart");
+      } else {
+        showCartToast.outOfStock();
+      }
     } else {
-      // TODO: Add to cart with selected size
-      console.log("Add to cart:", product.id, "size:", selectedSize);
+      // Add to cart only
+      const added = addItem({
+        productId: product.id,
+        productSlug: product.slug,
+        name: product.name,
+        sizeId: size.id,
+        sizeName: size.name,
+        price: product.basePrice,
+        image: product.primaryImage,
+        maxStock: size.stock,
+      });
+
+      if (added) {
+        showCartToast.itemAdded(product.name);
+      } else {
+        showCartToast.outOfStock();
+      }
     }
 
     handleClose();

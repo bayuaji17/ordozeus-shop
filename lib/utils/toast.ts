@@ -31,6 +31,15 @@ export const showSuccessToast = {
     ),
 };
 
+export const showCartToast = {
+  itemAdded: (productName: string) =>
+    toast.success(`${productName} added to cart`),
+  itemRemoved: () => toast.success("Item removed from cart"),
+  quantityUpdated: () => toast.success("Quantity updated"),
+  maxStockReached: () => toast.error("Maximum available quantity reached"),
+  outOfStock: () => toast.error("Item is out of stock"),
+};
+
 export const showErrorToast = {
   generic: (message?: string) =>
     toast.error(message || "Something went wrong. Please try again."),

@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { products, productImages, categories, productCategories } from "@/lib/db/schema";
+import { products, productImages, categories, productCategories, productSizes, sizes } from "@/lib/db/schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 
 export interface FeaturedProduct {
@@ -12,6 +12,12 @@ export interface FeaturedProduct {
   basePrice: number;
   primaryImage: string | null;
   categories: string[];
+  sizes: {
+    id: string;
+    name: string;
+    stock: number;
+    sku: string | null;
+  }[];
 }
 
 /**
@@ -58,7 +64,7 @@ export async function getFeaturedProducts(limit: number = 8): Promise<FeaturedPr
             eq(productImages.isPrimary, true)
           )
         );
-      
+
       primaryImages = imagesResult;
 
       // Get categories
@@ -70,28 +76,64 @@ export async function getFeaturedProducts(limit: number = 8): Promise<FeaturedPr
         .from(productCategories)
         .innerJoin(categories, eq(productCategories.categoryId, categories.id))
         .where(sql`${productCategories.productId} IN ${productIds}`);
+
+      // Get sizes
+      const sizesResult = await db
+        .select({
+          productId: productSizes.productId,
+          sizeId: productSizes.id,
+          sizeName: sizes.name,
+          stock: productSizes.stock,
+          sku: productSizes.sku,
+        })
+        .from(productSizes)
+        .innerJoin(sizes, eq(productSizes.sizeId, sizes.id))
+        .where(sql`${productSizes.productId} IN ${productIds}`);
+
+      // Group categories by product
+      const categoriesByProduct = categoryResult.reduce((acc, curr) => {
+        if (!acc[curr.productId]) {
+          acc[curr.productId] = [];
+        }
+        acc[curr.productId].push(curr.categoryName);
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      // Create image lookup map
+      const imageMap = primaryImages.reduce((acc, img) => {
+        acc[img.productId] = img.url;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Group sizes by product
+      const sizesByProduct = sizesResult.reduce((acc, curr) => {
+        if (!acc[curr.productId]) {
+          acc[curr.productId] = [];
+        }
+        acc[curr.productId].push({
+          id: curr.sizeId,
+          name: curr.sizeName,
+          stock: curr.stock,
+          sku: curr.sku,
+        });
+        return acc;
+      }, {} as Record<string, { id: string; name: string; stock: number; sku: string | null }[]>);
+
+      // Combine data
+      return featuredProducts.map((product) => ({
+        ...product,
+        primaryImage: imageMap[product.id] || null,
+        categories: categoriesByProduct[product.id] || [],
+        sizes: sizesByProduct[product.id] || [],
+      }));
     }
 
-    // Group categories by product
-    const categoriesByProduct = categoryResult.reduce((acc, curr) => {
-      if (!acc[curr.productId]) {
-        acc[curr.productId] = [];
-      }
-      acc[curr.productId].push(curr.categoryName);
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    // Create image lookup map
-    const imageMap = primaryImages.reduce((acc, img) => {
-      acc[img.productId] = img.url;
-      return acc;
-    }, {} as Record<string, string>);
-
-    // Combine data
+    // Return products with empty arrays if no productIds
     return featuredProducts.map((product) => ({
       ...product,
-      primaryImage: imageMap[product.id] || null,
-      categories: categoriesByProduct[product.id] || [],
+      primaryImage: null,
+      categories: [],
+      sizes: [],
     }));
   } catch (error) {
     console.error("Error fetching featured products:", error);

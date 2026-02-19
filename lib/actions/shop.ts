@@ -13,6 +13,7 @@ import {
 import {
   sql,
   eq,
+  ne,
   ilike,
   and,
   desc,
@@ -24,6 +25,9 @@ import {
 } from "drizzle-orm";
 import type {
   ShopProduct,
+  ShopProductDetail,
+  ShopProductImage,
+  ShopProductSize,
   CategoryNode,
   ShopProductsResponse,
 } from "@/lib/types/shop";
@@ -481,3 +485,138 @@ const getAllCategoryIdsFromSlugs = cache(
 export async function getCategoriesWithCounts(): Promise<CategoryNode[]> {
   return getCachedCategories();
 }
+
+// ============================================
+// PRODUCT DETAIL - Cached per-request
+// ============================================
+
+/**
+ * Fetch single product by slug with full details.
+ * Uses React.cache() for per-request deduplication.
+ */
+export const getProductBySlug = cache(async (slug: string): Promise<ShopProductDetail | null> => {
+  try {
+    const product = await db.query.products.findFirst({
+      where: and(eq(products.slug, slug), eq(products.status, "active")),
+      with: {
+        productCategories: {
+          with: {
+            category: true,
+          },
+        },
+        productImages: {
+          orderBy: (images, { asc }) => [asc(images.displayOrder)],
+        },
+        sizes: {
+          with: {
+            size: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      return null;
+    }
+
+    // Map images
+    const images: ShopProductImage[] = product.productImages.map((img) => ({
+      id: img.id,
+      url: img.url,
+      altText: img.altText,
+      isPrimary: img.isPrimary,
+    }));
+
+    // Map sizes
+    const sizes: ShopProductSize[] = product.sizes.map((s) => ({
+      id: s.id,
+      name: s.size.name,
+      stock: s.stock,
+      sku: s.sku,
+    }));
+
+    // Get primary image
+    const primaryImage =
+      product.productImages.find((img) => img.isPrimary)?.url ||
+      product.productImages[0]?.url ||
+      null;
+
+    return {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      basePrice: product.basePrice,
+      primaryImage,
+      categories: product.productCategories.map((pc) => pc.category.name),
+      sizes,
+      images,
+      createdAt: product.createdAt,
+    };
+  } catch (error) {
+    console.error("Error fetching product by slug:", error);
+    return null;
+  }
+});
+
+/**
+ * Fetch related products (same category, excluding current).
+ */
+export const getRelatedProducts = cache(
+  async (productId: string, categoryNames: string[], limit: number = 4): Promise<ShopProduct[]> => {
+    try {
+      // Get products in same categories, excluding current
+      const related = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          slug: products.slug,
+          description: products.description,
+          basePrice: products.basePrice,
+          createdAt: products.createdAt,
+        })
+        .from(products)
+        .innerJoin(
+          productCategories,
+          eq(products.id, productCategories.productId),
+        )
+        .innerJoin(categories, eq(productCategories.categoryId, categories.id))
+        .where(
+          and(
+            eq(products.status, "active"),
+            ne(products.id, productId),
+            inArray(
+              categories.name,
+              categoryNames.length > 0 ? categoryNames : [""],
+            ),
+          ),
+        )
+        .groupBy(products.id)
+        .orderBy(desc(products.createdAt))
+        .limit(limit);
+
+      if (related.length === 0) {
+        return [];
+      }
+
+      const productIds = related.map((p) => p.id);
+      const [imagesData, sizesData] = await Promise.all([
+        fetchProductImages(productIds),
+        fetchProductSizes(productIds),
+      ]);
+
+      const imageMap = buildImageMap(imagesData);
+      const sizesMap = buildSizesMap(sizesData);
+
+      return related.map((product) => ({
+        ...product,
+        primaryImage: imageMap.get(product.id) || null,
+        categories: [], // Not needed for related products
+        sizes: sizesMap.get(product.id) || [],
+      }));
+    } catch (error) {
+      console.error("Error fetching related products:", error);
+      return [];
+    }
+  },
+);

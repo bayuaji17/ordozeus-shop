@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartItem, CartState, CartSummary, AddToCartInput } from "@/lib/types/cart";
+import type { CartState, CartSummary, AddToCartInput } from "@/lib/types/cart";
 
 interface CartStore extends CartState {
   // Actions
@@ -42,7 +42,7 @@ export const useCartStore = create<CartStore>()(
 
           set({
             items: items.map((item) =>
-              item.id === id ? { ...item, quantity: newQuantity } : item
+              item.id === id ? { ...item, quantity: newQuantity } : item,
             ),
           });
         } else {
@@ -88,9 +88,7 @@ export const useCartStore = create<CartStore>()(
         }
 
         set({
-          items: items.map((i) =>
-            i.id === itemId ? { ...i, quantity } : i
-          ),
+          items: items.map((i) => (i.id === itemId ? { ...i, quantity } : i)),
         });
 
         return true;
@@ -106,7 +104,7 @@ export const useCartStore = create<CartStore>()(
         const { items } = get();
         const subtotal = items.reduce(
           (sum, item) => sum + item.price * item.quantity,
-          0
+          0,
         );
         const itemCount = items.length;
         const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -134,12 +132,6 @@ export const useCartStore = create<CartStore>()(
         }
         return persistedState as CartState;
       },
-    }
-  )
+    },
+  ),
 );
-
-
-
-
-
-

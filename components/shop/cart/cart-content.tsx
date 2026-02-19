@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { CartItemCard } from "./cart-item-card";
 import { CartSummary } from "./cart-summary";
@@ -14,7 +14,7 @@ export function CartContent() {
     getSummary,
   } = useCartStore();
 
-  const summary = useMemo(() => getSummary(), [getSummary, items]);
+  const summary = getSummary();
 
   const handleUpdateQuantity = useCallback(
     (itemId: string, quantity: number) => {

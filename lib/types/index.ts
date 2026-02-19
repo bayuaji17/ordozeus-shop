@@ -127,6 +127,8 @@ export type {
 // ============================================================================
 export type {
   ShopProduct,
+  ShopProductDetail,
+  ShopProductImage,
   ShopProductSize,
   CategoryNode,
   ShopFilters,

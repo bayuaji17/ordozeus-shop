@@ -10,6 +10,17 @@ export interface ShopProduct {
   createdAt: Date
 }
 
+export interface ShopProductDetail extends ShopProduct {
+  images: ShopProductImage[]
+}
+
+export interface ShopProductImage {
+  id: string
+  url: string
+  altText: string | null
+  isPrimary: boolean
+}
+
 export interface ShopProductSize {
   id: string
   name: string

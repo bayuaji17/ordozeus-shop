@@ -24,11 +24,12 @@ function CartButton() {
       <Button variant="ghost" size="icon" className="relative">
         <ShoppingBag className="h-5 w-5" />
         <span className="sr-only">Cart</span>
-        {itemCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-            {itemCount > 99 ? "99+" : itemCount}
-          </span>
-        )}
+        <span
+          className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center"
+          suppressHydrationWarning
+        >
+          {itemCount > 99 ? "99+" : itemCount}
+        </span>
       </Button>
     </Link>
   );

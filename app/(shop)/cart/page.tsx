@@ -1,6 +1,6 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { CartContent } from "@/components/shop/cart/cart-content";
+import { CartHydrationWrapper } from "@/components/shop/cart/cart-hydration-wrapper";
 import { CartSkeleton } from "@/components/shop/cart/cart-skeleton";
 import type { Metadata } from "next";
 
@@ -22,9 +22,10 @@ export default function CartPage() {
           <span className="text-slate-900 font-medium">Cart</span>
         </nav>
 
-        <Suspense fallback={<CartSkeleton />}>
+        {/* Cart with hydration wrapper to prevent SSR mismatch */}
+        <CartHydrationWrapper fallback={<CartSkeleton />}>
           <CartContent />
-        </Suspense>
+        </CartHydrationWrapper>
       </div>
     </div>
   );

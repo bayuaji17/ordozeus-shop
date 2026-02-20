@@ -30,11 +30,6 @@ export function CartContent() {
     [removeItem]
   );
 
-  const handleCheckout = useCallback(() => {
-    // TODO: Implement checkout flow
-    console.log("Proceeding to checkout...");
-  }, []);
-
   if (items.length === 0) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -72,10 +67,7 @@ export function CartContent() {
       {/* Order Summary */}
       <div className="lg:col-span-1">
         <div className="lg:sticky lg:top-24">
-          <CartSummary
-            summary={summary}
-            onCheckout={handleCheckout}
-          />
+          <CartSummary summary={summary} />
         </div>
       </div>
     </div>

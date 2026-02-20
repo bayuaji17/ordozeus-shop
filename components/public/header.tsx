@@ -2,33 +2,52 @@
 
 import Link from "next/link";
 import { ShoppingBag, Menu } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useCartHydration } from "@/components/shop/cart/cart-hydration-wrapper";
 
 const navLinks = [
   { label: "Shop", href: "/products" },
   { label: "Collection", href: "/collection" },
 ];
 
+/**
+ * Cart button with SSR-safe rendering.
+ *
+ * During SSR and initial hydration:
+ * - Badge is invisible (opacity-0)
+ * - No text content rendered (prevents hydration mismatch)
+ *
+ * After hydration completes:
+ * - Badge fades in with actual count
+ */
 function CartButton() {
   const itemCount = useCartStore((state) => state.getItemCount());
+  const isHydrated = useCartHydration();
 
   return (
     <Link href="/cart">
       <Button variant="ghost" size="icon" className="relative">
         <ShoppingBag className="h-5 w-5" />
         <span className="sr-only">Cart</span>
+        {/* SSR-safe badge: invisible until hydrated */}
         <span
-          className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center"
-          suppressHydrationWarning
+          className={cn(
+            "absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center transition-opacity duration-200",
+            isHydrated ? "opacity-100" : "opacity-0"
+          )}
+          aria-hidden={!isHydrated}
         >
-          {itemCount > 99 ? "99+" : itemCount}
+          {isHydrated ? (itemCount > 99 ? "99+" : itemCount) : ""}
         </span>
       </Button>
     </Link>
@@ -50,10 +69,14 @@ export function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-75">
-                <div className="flex flex-col gap-6 mt-8">
-                  <Link href="/" className="text-xl font-semibold">
-                    OrdoZeus
-                  </Link>
+                <SheetHeader>
+                  <SheetTitle>
+                    <Link href="/" className="text-xl font-semibold">
+                      OrdoZeus
+                    </Link>
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-6 mt-8 px-4">
                   <nav className="flex flex-col gap-4">
                     {navLinks.map((link) => (
                       <SheetClose asChild key={link.href}>

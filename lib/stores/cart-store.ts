@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { CartState, CartSummary, AddToCartInput } from "@/lib/types/cart";
 
 interface CartStore extends CartState {
@@ -21,11 +21,16 @@ interface CartStore extends CartState {
 
 const STORAGE_KEY = "ordoshop-cart-v1";
 
+const initialState: Omit<CartState, "hasHydrated"> = {
+  items: [],
+  isOpen: false,
+};
+
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
-      items: [],
-      isOpen: false,
+      ...initialState,
+      hasHydrated: false,
 
       addItem: (input) => {
         const { items } = get();
@@ -34,7 +39,6 @@ export const useCartStore = create<CartStore>()(
         const existingItem = items.find((item) => item.id === id);
 
         if (existingItem) {
-          // Check if we can add more
           const newQuantity = existingItem.quantity + (input.quantity || 1);
           if (newQuantity > input.maxStock) {
             return false;
@@ -123,15 +127,22 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ items: state.items }),
       version: 1,
-      migrate: (persistedState: unknown, version: number) => {
-        if (version === 0) {
-          // Handle old cart format if needed
-          return { items: [], isOpen: false } as CartState;
-        }
-        return persistedState as CartState;
+      skipHydration: true,
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state) {
+            state.hasHydrated = true;
+          }
+        };
       },
     },
   ),
 );
+
+// Hook for hydration-aware rendering
+export function useCartHydration(): boolean {
+  return useCartStore((state) => state.hasHydrated);
+}

@@ -8,21 +8,14 @@ import type { CartSummary as CartSummaryType } from "@/lib/types/cart";
 
 interface CartSummaryProps {
   summary: CartSummaryType;
-  onCheckout: () => void;
+  onCheckout?: () => void;
   isLoading?: boolean;
 }
 
 export function CartSummary({
   summary,
-  onCheckout,
   isLoading = false,
 }: CartSummaryProps) {
-  // Flat shipping rate - could be dynamic based on location
-  const shipping = summary.subtotal > 500000 ? 0 : 25000;
-  const total = summary.subtotal + shipping;
-  const freeShippingThreshold = 500000;
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - summary.subtotal);
-
   return (
     <div className="bg-slate-50 rounded-2xl p-6 lg:p-8">
       <h2 className="text-lg font-semibold text-slate-900 mb-6">
@@ -37,40 +30,24 @@ export function CartSummary({
           </span>
         </div>
 
-        <div className="flex justify-between text-slate-600">
-          <span>Shipping</span>
-          <span className="font-medium text-slate-900">
-            {shipping === 0 ? "Free" : formatCurrency(shipping)}
-          </span>
-        </div>
-
-        {remainingForFreeShipping > 0 && (
-          <p className="text-sm text-slate-500">
-            Add {formatCurrency(remainingForFreeShipping)} more for free shipping
-          </p>
-        )}
-
         <Separator />
 
         <div className="flex justify-between items-center">
           <span className="text-lg font-semibold text-slate-900">Total</span>
           <span className="text-xl font-bold text-slate-900">
-            {formatCurrency(total)}
+            {formatCurrency(summary.subtotal)}
           </span>
         </div>
       </div>
 
-      <Button
-        className="w-full mt-6 bg-black text-white hover:bg-slate-800 rounded-full h-12 text-base font-medium"
-        onClick={onCheckout}
-        disabled={isLoading || summary.itemCount === 0}
-      >
-        {isLoading ? "Processing..." : "Proceed to Checkout"}
-      </Button>
-
-      <p className="text-center text-sm text-slate-500 mt-4">
-        Shipping & taxes calculated at checkout
-      </p>
+      <Link href="/checkout">
+        <Button
+          className="w-full mt-6 bg-black text-white hover:bg-slate-800 rounded-full h-12 text-base font-medium"
+          disabled={isLoading || summary.itemCount === 0}
+        >
+          Proceed to Checkout
+        </Button>
+      </Link>
 
       <div className="mt-6 pt-6 border-t border-slate-200">
         <Link

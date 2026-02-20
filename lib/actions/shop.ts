@@ -61,11 +61,6 @@ export async function getShopProducts(
     perPage,
   } = filters;
 
-  console.log(
-    "[DEBUG] getShopProducts called with filters:",
-    JSON.stringify(filters, null, 2),
-  );
-
   const offset = (page - 1) * perPage;
 
   // Build conditions array once - single source of truth for all filters
@@ -76,19 +71,11 @@ export async function getShopProducts(
     search,
   });
 
-  console.log("[DEBUG] Built conditions count:", conditions.length);
-  console.log("[DEBUG] Has search condition?:", !!(search && search.trim()));
-
   // Create the base where clause - always applies status filter plus any additional conditions
   const whereClause =
     conditions.length > 0
       ? and(eq(products.status, "active"), ...conditions)
       : eq(products.status, "active");
-
-  console.log(
-    "[DEBUG] Where clause type:",
-    whereClause ? "defined" : "undefined",
-  );
 
   // Build the main data query with dynamic sorting
   let dataQuery = db
@@ -132,20 +119,6 @@ export async function getShopProducts(
   ]);
 
   const total = countResult[0]?.count || 0;
-
-  console.log(
-    "[DEBUG] Query results - total count:",
-    total,
-    "products returned:",
-    productResults.length,
-  );
-  console.log("[DEBUG] Matched products details (name only search):");
-  productResults.forEach((p, i) => {
-    const nameMatch = p.name
-      .toLowerCase()
-      .includes((search || "").toLowerCase());
-    console.log(`  ${i + 1}. Name: "${p.name}" -> name match: ${nameMatch}`);
-  });
 
   // Early return if no products found
   if (productResults.length === 0) {
@@ -239,15 +212,9 @@ async function buildFilterConditions({
   // Search filter - searches product name ONLY
   if (search && search.trim()) {
     const searchTerm = `%${search.trim()}%`;
-    console.log("[DEBUG] Building search condition for term:", searchTerm);
     conditions.push(ilike(products.name, searchTerm));
-    console.log(
-      "[DEBUG] Search condition added: products.name LIKE",
-      searchTerm,
-    );
   }
 
-  console.log("[DEBUG] Total conditions built:", conditions.length);
   return conditions;
 }
 
@@ -448,7 +415,6 @@ const getCategoryMap = cache(async (): Promise<Map<string, CategoryNode>> => {
  */
 const getAllCategoryIdsFromSlugs = cache(
   async (slugs: string[]): Promise<string[]> => {
-    console.log("[DEBUG] getAllCategoryIdsFromSlugs called with slugs:", slugs);
     const categoryMap = await getCategoryMap();
     const allIds = new Set<string>();
 
@@ -472,9 +438,7 @@ const getAllCategoryIdsFromSlugs = cache(
       }
     }
 
-    const result = Array.from(allIds);
-    console.log("[DEBUG] Resolved category IDs from slugs:", result);
-    return result;
+    return Array.from(allIds);
   },
 );
 
@@ -494,76 +458,82 @@ export async function getCategoriesWithCounts(): Promise<CategoryNode[]> {
  * Fetch single product by slug with full details.
  * Uses React.cache() for per-request deduplication.
  */
-export const getProductBySlug = cache(async (slug: string): Promise<ShopProductDetail | null> => {
-  try {
-    const product = await db.query.products.findFirst({
-      where: and(eq(products.slug, slug), eq(products.status, "active")),
-      with: {
-        productCategories: {
-          with: {
-            category: true,
+export const getProductBySlug = cache(
+  async (slug: string): Promise<ShopProductDetail | null> => {
+    try {
+      const product = await db.query.products.findFirst({
+        where: and(eq(products.slug, slug), eq(products.status, "active")),
+        with: {
+          productCategories: {
+            with: {
+              category: true,
+            },
+          },
+          productImages: {
+            orderBy: (images, { asc }) => [asc(images.displayOrder)],
+          },
+          sizes: {
+            with: {
+              size: true,
+            },
           },
         },
-        productImages: {
-          orderBy: (images, { asc }) => [asc(images.displayOrder)],
-        },
-        sizes: {
-          with: {
-            size: true,
-          },
-        },
-      },
-    });
+      });
 
-    if (!product) {
+      if (!product) {
+        return null;
+      }
+
+      // Map images
+      const images: ShopProductImage[] = product.productImages.map((img) => ({
+        id: img.id,
+        url: img.url,
+        altText: img.altText,
+        isPrimary: img.isPrimary,
+      }));
+
+      // Map sizes
+      const sizes: ShopProductSize[] = product.sizes.map((s) => ({
+        id: s.id,
+        name: s.size.name,
+        stock: s.stock,
+        sku: s.sku,
+      }));
+
+      // Get primary image
+      const primaryImage =
+        product.productImages.find((img) => img.isPrimary)?.url ||
+        product.productImages[0]?.url ||
+        null;
+
+      return {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        basePrice: product.basePrice,
+        primaryImage,
+        categories: product.productCategories.map((pc) => pc.category.name),
+        sizes,
+        images,
+        createdAt: product.createdAt,
+      };
+    } catch (error) {
+      console.error("Error fetching product by slug:", error);
       return null;
     }
-
-    // Map images
-    const images: ShopProductImage[] = product.productImages.map((img) => ({
-      id: img.id,
-      url: img.url,
-      altText: img.altText,
-      isPrimary: img.isPrimary,
-    }));
-
-    // Map sizes
-    const sizes: ShopProductSize[] = product.sizes.map((s) => ({
-      id: s.id,
-      name: s.size.name,
-      stock: s.stock,
-      sku: s.sku,
-    }));
-
-    // Get primary image
-    const primaryImage =
-      product.productImages.find((img) => img.isPrimary)?.url ||
-      product.productImages[0]?.url ||
-      null;
-
-    return {
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      description: product.description,
-      basePrice: product.basePrice,
-      primaryImage,
-      categories: product.productCategories.map((pc) => pc.category.name),
-      sizes,
-      images,
-      createdAt: product.createdAt,
-    };
-  } catch (error) {
-    console.error("Error fetching product by slug:", error);
-    return null;
-  }
-});
+  },
+);
 
 /**
  * Fetch related products (same category, excluding current).
  */
 export const getRelatedProducts = cache(
-  async (productId: string, categoryNames: string[], limit: number = 4): Promise<ShopProduct[]> => {
+  async (
+    productId: string,
+    categoryNames: string[],
+    limit: number = 4,
+  ): Promise<ShopProduct[]> => {
     try {
       // Get products in same categories, excluding current
       const related = await db

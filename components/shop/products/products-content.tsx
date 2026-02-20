@@ -14,7 +14,7 @@ import { PerPageSelector } from "@/components/shop/sorting/per-page-selector";
 import { Pagination } from "@/components/shop/pagination/pagination";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { useProductFilters } from "@/lib/hooks/use-product-filters";
+import { useProductFilters } from "@/hooks/use-product-filters";
 import { SORT_OPTIONS } from "@/lib/types/shop";
 import type { ShopProductsResponse, CategoryNode } from "@/lib/types/shop";
 

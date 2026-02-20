@@ -22,7 +22,7 @@ export function QuantityStepper({
   const canIncrease = quantity < maxStock;
 
   return (
-    <div className="flex items-center border rounded-lg">
+    <div className="flex items-center border rounded-lg w-fit mt-1.5">
       <Button
         variant="ghost"
         size="icon"
@@ -33,9 +33,7 @@ export function QuantityStepper({
       >
         <Minus className="h-3 w-3" />
       </Button>
-      <span className="w-10 text-center text-sm font-medium">
-        {quantity}
-      </span>
+      <span className="w-10 text-center text-sm font-medium">{quantity}</span>
       <Button
         variant="ghost"
         size="icon"

@@ -15,7 +15,7 @@ export async function requireAdmin(): Promise<Session> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  console.log(session);
+
   if (!session || session.user.role !== "admin") {
     redirect("/");
   }

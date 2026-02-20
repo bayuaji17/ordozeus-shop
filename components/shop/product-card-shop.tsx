@@ -12,9 +12,10 @@ import { formatCurrency } from "@/lib/currency";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { showCartToast } from "@/lib/utils/toast";
 import type { ShopProduct } from "@/lib/types/shop";
+import type { CollectionProduct } from "@/lib/types/collections";
 
 interface ProductCardShopProps {
-  product: ShopProduct;
+  product: ShopProduct | CollectionProduct;
 }
 
 export function ProductCardShop({ product }: ProductCardShopProps) {
@@ -105,11 +106,11 @@ export function ProductCardShop({ product }: ProductCardShopProps) {
       </Link>
 
       {/* Content Section */}
-      <div className="p-4 md:p-5 flex flex-col gap-3">
-        {/* Product Info */}
-        <div className="space-y-1">
+      <div className="p-4 md:p-5 flex flex-col flex-1">
+        {/* Product Info - Fixed height for consistency */}
+        <div className="space-y-2 flex-1">
           <Link href={`/products/${product.slug}`}>
-            <h3 className="text-slate-900 text-base md:text-lg font-medium leading-tight line-clamp-2 hover:text-slate-700 transition-colors">
+            <h3 className="text-slate-900 text-base md:text-lg font-medium leading-snug line-clamp-2 hover:text-slate-700 transition-colors h-[2.5rem] md:h-[2.75rem]">
               {product.name}
             </h3>
           </Link>
@@ -118,16 +119,16 @@ export function ProductCardShop({ product }: ProductCardShopProps) {
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
+        {/* Action Buttons - Fixed to bottom */}
+        <div className="flex gap-2 mt-4">
           <Button
-            className="flex-1 bg-black text-white hover:bg-slate-800 rounded-full h-10 text-xs md:text-sm font-medium tracking-wide"
+            className="flex-1 bg-black text-white hover:bg-slate-800 rounded-lg h-10 text-xs md:text-sm font-medium tracking-wide"
             onClick={() => handleActionClick("buy")}
           >
             Buy Now
           </Button>
           <Button
-            className="w-10 h-10 p-0 bg-black text-white hover:bg-slate-800 rounded-full shrink-0"
+            className="w-10 h-10 p-0 bg-black text-white hover:bg-slate-800 rounded-lg shrink-0"
             onClick={() => handleActionClick("cart")}
             aria-label="Add to cart"
           >

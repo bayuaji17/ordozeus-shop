@@ -3,8 +3,12 @@ export interface CustomerInfo {
   email: string;
   phone: string;
   address: string;
+  province: string;
   city: string;
+  district: string;
+  subdistrict: string;
   postalCode: string;
+  destinationId?: number; // RajaOngkir destination ID for shipping calculations
 }
 
 export type PaymentMethod = "bank_transfer" | "midtrans";

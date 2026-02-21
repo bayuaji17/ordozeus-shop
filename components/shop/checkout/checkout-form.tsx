@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -18,15 +18,39 @@ import {
   FieldLegend,
 } from "@/components/ui/field";
 import { PaymentMethodCard } from "./payment-method-card";
+import { LocationSelector, LocationDetails } from "./location-selector";
 import { useCheckoutStore } from "@/lib/stores/checkout-store";
 import { useCartStore } from "@/lib/stores/cart-store";
+import type { CustomerInfo } from "@/lib/types/checkout";
+
+interface LocationOption {
+  id: number;
+  label: string;
+  province: string;
+  city: string;
+  district: string;
+  subdistrict: string;
+  zipCode: string;
+}
+
+const locationSchema = z.object({
+  id: z.number(),
+  label: z.string(),
+  province: z.string(),
+  city: z.string(),
+  district: z.string(),
+  subdistrict: z.string(),
+  zipCode: z.string(),
+});
+
 const checkoutSchema = z.object({
   name: z.string().min(2, "Full name is required"),
   email: z.string().email("Valid email is required"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   address: z.string().min(10, "Full address is required"),
-  city: z.string().min(2, "City is required"),
-  postalCode: z.string().min(5, "Postal code is required"),
+  location: locationSchema.refine((val) => val != null, {
+    message: "Please select a location",
+  }),
   paymentMethod: z.enum(["bank_transfer", "midtrans"]),
 });
 
@@ -53,19 +77,26 @@ export function CheckoutForm() {
   });
 
   const selectedPayment = useWatch({ control, name: "paymentMethod" });
+  const selectedLocation = useWatch({ control, name: "location" });
 
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
 
-    // Save to store
-    setCustomerInfo({
+    // Save to store with full location details
+    const customerInfo: CustomerInfo = {
       name: data.name,
       email: data.email,
       phone: data.phone,
       address: data.address,
-      city: data.city,
-      postalCode: data.postalCode,
-    });
+      province: data.location.province,
+      city: data.location.city,
+      district: data.location.district,
+      subdistrict: data.location.subdistrict,
+      postalCode: data.location.zipCode,
+      destinationId: data.location.id,
+    };
+
+    setCustomerInfo(customerInfo);
     setPaymentMethod(data.paymentMethod);
 
     // Simulate processing
@@ -83,7 +114,10 @@ export function CheckoutForm() {
           <FieldLegend>Contact Information</FieldLegend>
 
           <Field>
-            <FieldLabel>Full Name</FieldLabel>
+            <FieldLabel>
+              Full Name
+              <span className="text-destructive ml-1">*</span>
+            </FieldLabel>
             <Input
               placeholder="John Doe"
               {...register("name")}
@@ -96,7 +130,10 @@ export function CheckoutForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field>
-              <FieldLabel>Email</FieldLabel>
+              <FieldLabel>
+                Email
+                <span className="text-destructive ml-1">*</span>
+              </FieldLabel>
               <Input
                 type="email"
                 placeholder="john@example.com"
@@ -109,7 +146,10 @@ export function CheckoutForm() {
             </Field>
 
             <Field>
-              <FieldLabel>Phone Number</FieldLabel>
+              <FieldLabel>
+                Phone Number
+                <span className="text-destructive ml-1">*</span>
+              </FieldLabel>
               <Input
                 type="tel"
                 placeholder="081234567890"
@@ -130,7 +170,10 @@ export function CheckoutForm() {
           <FieldLegend>Shipping Address</FieldLegend>
 
           <Field>
-            <FieldLabel>Full Address</FieldLabel>
+            <FieldLabel>
+              Full Address
+              <span className="text-destructive ml-1">*</span>
+            </FieldLabel>
             <Textarea
               placeholder="Jl. Sudirman No. 123, RT.001/RW.002"
               rows={3}
@@ -142,31 +185,36 @@ export function CheckoutForm() {
             )}
           </Field>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel>City</FieldLabel>
-              <Input
-                placeholder="Jakarta"
-                {...register("city")}
-                aria-invalid={!!errors.city}
-              />
-              {errors.city && (
-                <FieldError errors={[{ message: errors.city.message }]} />
+          <Field>
+            <FieldLabel>
+              Location
+              <span className="text-destructive ml-1">*</span>
+            </FieldLabel>
+            <Controller
+              name="location"
+              control={control}
+              render={({ field }) => (
+                <LocationSelector
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={isSubmitting}
+                />
               )}
-            </Field>
+            />
+            {errors.location && (
+              <FieldError errors={[{ message: errors.location.message }]} />
+            )}
+          </Field>
 
-            <Field>
-              <FieldLabel>Postal Code</FieldLabel>
-              <Input
-                placeholder="12345"
-                {...register("postalCode")}
-                aria-invalid={!!errors.postalCode}
-              />
-              {errors.postalCode && (
-                <FieldError errors={[{ message: errors.postalCode.message }]} />
-              )}
-            </Field>
-          </div>
+          {/* Display selected location details */}
+          {selectedLocation && (
+            <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+              <p className="text-sm font-medium text-slate-900">
+                Selected Location Details
+              </p>
+              <LocationDetails location={selectedLocation} />
+            </div>
+          )}
         </FieldSet>
 
         <Separator />

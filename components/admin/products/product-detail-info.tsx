@@ -45,7 +45,7 @@ export function ProductDetailInfo({ product }: ProductDetailInfoProps) {
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Slug</p>
-            <p className="text-base font-mono text-sm">{product.slug}</p>
+            <p className="text-base font-mono">{product.slug}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">
@@ -93,7 +93,7 @@ export function ProductDetailInfo({ product }: ProductDetailInfoProps) {
                     key={ps.id}
                     className="flex items-center justify-between text-sm"
                   >
-                    <span>{ps.sizeName}</span>
+                    <span className="uppercase">{ps.sizeName}</span>
                     <span
                       className={
                         ps.stock === 0

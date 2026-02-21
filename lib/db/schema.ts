@@ -257,6 +257,19 @@ export const productImages = pgTable("product_images", {
 });
 
 // ============================================================================
+// COURIERS
+// ============================================================================
+
+export const couriers = pgTable("couriers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================================================
 // CAROUSEL (UNCHANGED)
 // ============================================================================
 

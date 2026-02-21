@@ -1,42 +1,18 @@
-import { Suspense } from "react";
-import { getSizes } from "@/lib/actions/sizes";
-import { getSizeTypes } from "@/lib/actions/size-types";
-import { SizeSettingsClient } from "@/components/admin/settings/size-settings-client";
-import { SizeTypeSettingsClient } from "@/components/admin/settings/size-type-settings-client";
-import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/server";
-
-async function SettingsContent() {
-  const [{ all, grouped }, sizeTypes] = await Promise.all([
-    getSizes(),
-    getSizeTypes(),
-  ]);
-
-  const sizeTypeOptions = sizeTypes.map((t) => ({ id: t.id, name: t.name }));
-
-  return (
-    <div className="space-y-6">
-      <SizeTypeSettingsClient sizeTypes={sizeTypes} />
-      <SizeSettingsClient
-        sizes={all}
-        grouped={grouped}
-        sizeTypes={sizeTypeOptions}
-      />
-    </div>
-  );
-}
-
-function SettingsLoading() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-60 w-full" />
-      <Skeleton className="h-80 w-full" />
-    </div>
-  );
-}
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Ruler, Truck } from "lucide-react";
 
 export default async function SettingsPage() {
   await requireAdmin();
+
   return (
     <div className="p-6">
       <div className="space-y-6">
@@ -47,9 +23,47 @@ export default async function SettingsPage() {
           </p>
         </div>
 
-        <Suspense fallback={<SettingsLoading />}>
-          <SettingsContent />
-        </Suspense>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Ruler className="h-5 w-5 text-primary" />
+                <CardTitle>Size Configuration</CardTitle>
+              </div>
+              <CardDescription>
+                Manage size types (Clothing, Shoes) and individual sizes (S, M, L, EU 42)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin/settings/sizes">
+                <Button variant="outline" className="w-full">
+                  Configure Sizes
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-primary" />
+                <CardTitle>Courier Configuration</CardTitle>
+              </div>
+              <CardDescription>
+                Manage shipping couriers (JNE, TIKI, POS) available for checkout
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin/settings/couriers">
+                <Button variant="outline" className="w-full">
+                  Configure Couriers
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

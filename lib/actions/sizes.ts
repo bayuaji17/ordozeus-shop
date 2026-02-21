@@ -82,6 +82,7 @@ export async function createSize(data: {
 
     revalidatePath("/admin/products");
     revalidatePath("/admin/settings");
+    revalidatePath("/admin/settings/sizes");
 
     return {
       success: true,
@@ -147,6 +148,7 @@ export async function updateSize(
 
     revalidatePath("/admin/products");
     revalidatePath("/admin/settings");
+    revalidatePath("/admin/settings/sizes");
 
     return { success: true };
   } catch (error) {
@@ -182,6 +184,7 @@ export async function deleteSize(id: string) {
 
     revalidatePath("/admin/products");
     revalidatePath("/admin/settings");
+    revalidatePath("/admin/settings/sizes");
 
     return { success: true };
   } catch (error) {

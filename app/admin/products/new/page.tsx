@@ -42,14 +42,13 @@ export default async function NewProductPage() {
   await requireAdmin();
   return (
     <div className="p-6">
-      <div className="flex flex-col gap-2">
-        <Button asChild className="w-fit">
+      <div className="flex items-center gap-4 mb-6">
+        <Button asChild className="w-fit" variant={"ghost"}>
           <Link href="/admin/products">
             <ArrowLeft />
-            Back
           </Link>
         </Button>
-        <div className="mb-6">
+        <div>
           <h1 className="text-2xl font-bold">Create New Product</h1>
           <p className="text-muted-foreground mt-1">
             Add a new product to your inventory

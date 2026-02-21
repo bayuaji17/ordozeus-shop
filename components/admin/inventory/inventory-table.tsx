@@ -107,7 +107,9 @@ export function InventoryTable({ items, onAdjustStock }: InventoryTableProps) {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline">{item.sizeInfo}</Badge>
+                    <Badge variant="outline" className="uppercase">
+                      {item.sizeInfo}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3">{getStockBadge(item.stock)}</td>
                   <td className="px-4 py-3 text-right">

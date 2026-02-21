@@ -38,6 +38,11 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
+    title: "Analytics",
+    url: "/admin/analytics",
+    icon: BarChart3,
+  },
+  {
     title: "Products",
     url: "/admin/products",
     icon: Package,
@@ -66,11 +71,6 @@ const menuItems = [
     title: "Customers",
     url: "/admin/customers",
     icon: Users,
-  },
-  {
-    title: "Analytics",
-    url: "/admin/analytics",
-    icon: BarChart3,
   },
   {
     title: "Settings",
@@ -120,7 +120,9 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t p-4 space-y-2">
         <div className="text-xs text-muted-foreground">
-          <p className="font-medium truncate">{session?.user?.name}</p>
+          <p className="font-medium truncate capitalize">
+            {session?.user?.name}
+          </p>
           <p className="truncate">{session?.user?.email}</p>
         </div>
         <Button

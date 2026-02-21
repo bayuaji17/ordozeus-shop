@@ -152,7 +152,7 @@ export default async function DashboardPage() {
           <CardContent>
             {stats.lowStock.count === 0 ? (
               <p className="text-sm text-muted-foreground">
-                All items are well stocked! 🎉
+                All items are well stocked!
               </p>
             ) : (
               <div className="space-y-3">

@@ -33,7 +33,7 @@ export function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline-block">
+              <span className="hidden sm:inline-block capitalize">
                 {session?.user?.name || session?.user?.email || "User"}
               </span>
             </Button>

@@ -705,7 +705,7 @@ export function ProductForm({
                             className="border-b last:border-0"
                           >
                             <td className="px-4 py-2">
-                              <span className="font-medium">
+                              <span className="font-medium uppercase">
                                 {sizeRecord?.name ?? "Unknown"}
                               </span>
                               <span className="text-xs text-muted-foreground ml-2">
@@ -775,6 +775,7 @@ export function ProductForm({
                           size="sm"
                           onClick={() => addSize(size.id)}
                           disabled={isSubmitting}
+                          className="uppercase"
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           {size.name}

@@ -5,6 +5,9 @@ import { getSizes } from "@/lib/actions/sizes";
 import { ProductForm } from "@/components/admin/products/product-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireAdmin } from "@/lib/auth/server";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 interface EditProductPageProps {
   params: Promise<{
@@ -76,11 +79,18 @@ export default async function EditProductPage({
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Edit Product</h1>
-        <p className="text-muted-foreground mt-1">
-          Update product information and settings
-        </p>
+      <div className="flex items-center gap-4 mb-4">
+        <Button asChild variant={"ghost"}>
+          <Link href={`/admin/products/${id}`}>
+            <ArrowLeft />
+          </Link>
+        </Button>
+        <div className="">
+          <h1 className="text-2xl font-bold">Edit Product</h1>
+          <p className="text-muted-foreground mt-1">
+            Update product information and settings
+          </p>
+        </div>
       </div>
 
       <Suspense fallback={<EditProductSkeleton />}>

@@ -12,6 +12,51 @@ import { deleteFromR2 } from "@/lib/r2";
 import { requireAdmin } from "@/lib/auth/server";
 
 /**
+ * Helper function to build a hierarchical sort path for a category
+ * Format: "001-Name.002-Child.003-Grandchild"
+ * This ensures depth-first hierarchical ordering when sorted alphabetically
+ */
+function buildSortPath(
+  category: {
+    id: string;
+    name: string;
+    parentId: string | null;
+    displayOrder: number;
+  },
+  categoryMap: Map<
+    string,
+    {
+      id: string;
+      name: string;
+      parentId: string | null;
+      displayOrder: number;
+    }
+  >
+): string {
+  const path: string[] = [];
+  const visited = new Set<string>(); // Prevent infinite loops
+
+  let current:
+    | {
+        id: string;
+        name: string;
+        parentId: string | null;
+        displayOrder: number;
+      }
+    | undefined = category;
+
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    // Pad displayOrder to 3 digits for consistent sorting
+    const orderStr = String(current.displayOrder).padStart(3, "0");
+    path.unshift(`${orderStr}-${current.name}`);
+    current = current.parentId ? categoryMap.get(current.parentId) : undefined;
+  }
+
+  return path.join(".");
+}
+
+/**
  * Get all categories with product counts and child counts
  */
 export async function getCategories(filters?: {
@@ -110,10 +155,24 @@ export async function getCategories(filters?: {
       childCount: childCountMap.get(cat.id) || 0,
     }));
 
-    const total = allCategories.length;
+    // Build parent lookup map for hierarchical sorting
+    const categoryMap = new Map(allCategories.map((c) => [c.id, c]));
+
+    // Generate sortPath for each category to enable depth-first hierarchical sorting
+    const categoriesWithSortPath = allCategories.map((cat) => ({
+      ...cat,
+      sortPath: buildSortPath(cat, categoryMap),
+    }));
+
+    // Sort by sortPath (hierarchical order: Root > L1 > L2 > L3)
+    const sortedCategories = categoriesWithSortPath.sort((a, b) =>
+      a.sortPath.localeCompare(b.sortPath)
+    );
+
+    const total = sortedCategories.length;
     const totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
-    const paginatedCategories = allCategories.slice(offset, offset + limit);
+    const paginatedCategories = sortedCategories.slice(offset, offset + limit);
 
     return {
       categories: paginatedCategories,

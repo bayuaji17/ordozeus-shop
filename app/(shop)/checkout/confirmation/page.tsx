@@ -74,7 +74,12 @@ export default function ConfirmationPage() {
               <p>{customerInfo.email}</p>
               <p>{customerInfo.phone}</p>
               <p className="mt-2">{customerInfo.address}</p>
-              <p>{customerInfo.city}, {customerInfo.postalCode}</p>
+              <p>
+                {customerInfo.subdistrict}, {customerInfo.district}
+              </p>
+              <p>
+                {customerInfo.city}, {customerInfo.province} {customerInfo.postalCode}
+              </p>
             </div>
           </div>
 

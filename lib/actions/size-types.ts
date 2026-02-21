@@ -73,6 +73,7 @@ export async function createSizeType(data: {
       .returning();
 
     revalidatePath("/admin/settings");
+    revalidatePath("/admin/settings/sizes");
 
     return { success: true, sizeTypeId: sizeType.id };
   } catch (error) {
@@ -137,6 +138,7 @@ export async function updateSizeType(
       .where(eq(sizeTypes.id, id));
 
     revalidatePath("/admin/settings");
+    revalidatePath("/admin/settings/sizes");
     revalidatePath("/admin/products");
 
     return { success: true };
@@ -171,6 +173,7 @@ export async function deleteSizeType(id: string) {
     await db.delete(sizeTypes).where(eq(sizeTypes.id, id));
 
     revalidatePath("/admin/settings");
+    revalidatePath("/admin/settings/sizes");
 
     return { success: true };
   } catch (error) {

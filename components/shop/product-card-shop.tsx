@@ -110,7 +110,7 @@ export function ProductCardShop({ product }: ProductCardShopProps) {
         {/* Product Info - Fixed height for consistency */}
         <div className="space-y-2 flex-1">
           <Link href={`/products/${product.slug}`}>
-            <h3 className="text-slate-900 text-base md:text-lg font-medium leading-snug line-clamp-2 hover:text-slate-700 transition-colors h-[2.5rem] md:h-[2.75rem]">
+            <h3 className="text-slate-900 text-base md:text-lg font-medium leading-snug line-clamp-2 hover:text-slate-700 transition-colors h-10 md:h-11">
               {product.name}
             </h3>
           </Link>

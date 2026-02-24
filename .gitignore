@@ -44,5 +44,6 @@ next-env.d.ts
 /.agents/
 /.claude/
 CLAUDE.md
+AGENTS.md
 AUTH_SETUP.md
 opencode.json

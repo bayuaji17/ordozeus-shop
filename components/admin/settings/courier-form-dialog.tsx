@@ -60,7 +60,8 @@ export function CourierFormDialog({
     if (!code.trim()) {
       newErrors.code = "Code is required";
     } else if (!/^[a-z0-9_-]+$/i.test(code)) {
-      newErrors.code = "Code can only contain letters, numbers, hyphens, and underscores";
+      newErrors.code =
+        "Code can only contain letters, numbers, hyphens, and underscores";
     }
 
     setErrors(newErrors);
@@ -112,7 +113,7 @@ export function CourierFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>

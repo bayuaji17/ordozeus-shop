@@ -8,7 +8,7 @@ export interface CustomerInfo {
   district: string;
   subdistrict: string;
   postalCode: string;
-  destinationId?: number; // RajaOngkir destination ID for shipping calculations
+  destinationId?: number; // Shipping destination ID for shipping calculations
 }
 
 export type PaymentMethod = "bank_transfer" | "midtrans";

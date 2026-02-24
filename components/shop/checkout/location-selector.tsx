@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { searchDestinations } from "@/lib/actions/rajaongkir";
+import { searchDestinations } from "@/lib/actions/location";
 
 interface LocationOption {
   id: number;
@@ -26,7 +26,7 @@ interface LocationOption {
   city: string;
   district: string;
   subdistrict: string;
-  zipCode: string;
+  zipCode: string | undefined;
 }
 
 interface LocationSelectorProps {

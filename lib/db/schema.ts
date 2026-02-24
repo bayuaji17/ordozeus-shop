@@ -270,6 +270,29 @@ export const couriers = pgTable("couriers", {
 });
 
 // ============================================================================
+// SHIPPING RATES
+// ============================================================================
+
+export const shippingRates = pgTable("shipping_rates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  courierId: uuid("courier_id").notNull().references(() => couriers.id, { onDelete: "cascade" }),
+  destinationCityId: varchar("destination_city_id", { length: 10 }).notNull(),
+  destinationProvinceId: varchar("destination_province_id", { length: 10 }).notNull(),
+  basePrice: integer("base_price").notNull(), // IDR cents
+  estimatedDays: varchar("estimated_days", { length: 20 }), // e.g., "2-3"
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const shippingRatesRelations = relations(shippingRates, ({ one }) => ({
+  courier: one(couriers, {
+    fields: [shippingRates.courierId],
+    references: [couriers.id],
+  }),
+}));
+
+// ============================================================================
 // CAROUSEL (UNCHANGED)
 // ============================================================================
 
@@ -383,3 +406,26 @@ export const productImagesRelations = relations(productImages, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+// ============================================================================
+// SHOP SETTINGS (LOCATION IDENTITY)
+// ============================================================================
+
+export const shopSettings = pgTable("shop_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Location data - store both ID and name
+  provinceId: varchar("province_id", { length: 10 }),
+  provinceName: varchar("province_name", { length: 100 }),
+
+  cityId: varchar("city_id", { length: 10 }),
+  cityName: varchar("city_name", { length: 100 }),
+
+  districtId: varchar("district_id", { length: 10 }),
+  districtName: varchar("district_name", { length: 100 }),
+
+  postalCode: varchar("postal_code", { length: 10 }),
+  fullAddress: text("full_address"),
+
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

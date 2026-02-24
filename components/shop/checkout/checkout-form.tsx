@@ -23,16 +23,6 @@ import { useCheckoutStore } from "@/lib/stores/checkout-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import type { CustomerInfo } from "@/lib/types/checkout";
 
-interface LocationOption {
-  id: number;
-  label: string;
-  province: string;
-  city: string;
-  district: string;
-  subdistrict: string;
-  zipCode: string;
-}
-
 const locationSchema = z.object({
   id: z.number(),
   label: z.string(),
@@ -248,7 +238,9 @@ export function CheckoutForm() {
           disabled={isSubmitting}
           className="w-full bg-black text-white hover:bg-slate-800 rounded-full h-12 text-base font-medium"
         >
-          {isSubmitting ? "Processing..." : `Complete Order - ${formatCurrency(summary.subtotal)}`}
+          {isSubmitting
+            ? "Processing..."
+            : `Complete Order - ${formatCurrency(summary.subtotal)}`}
         </Button>
       </FieldGroup>
     </form>

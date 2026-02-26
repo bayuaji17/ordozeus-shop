@@ -35,6 +35,7 @@ import {
 import { getCitiesByProvince } from "@/lib/actions/location";
 import { toast } from "sonner";
 import { Plus, Pencil } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Courier {
   id: string;
@@ -76,31 +77,26 @@ export function AddRateDialog({
 
   const isEditing = !!existingRate;
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    setValue,
-    reset,
-  } = useForm<RateFormData>({
-    defaultValues: existingRate
-      ? {
-          courierId: existingRate.courierId,
-          destinationProvinceId: existingRate.destinationProvinceId,
-          destinationCityId: existingRate.destinationCityId,
-          basePrice: existingRate.basePrice,
-          estimatedDays: existingRate.estimatedDays || "",
-          isActive: existingRate.isActive,
-        }
-      : {
-          courierId: "",
-          destinationProvinceId: "",
-          destinationCityId: "",
-          basePrice: 0,
-          estimatedDays: "",
-          isActive: true,
-        },
-  });
+  const { control, handleSubmit, watch, setValue, reset } =
+    useForm<RateFormData>({
+      defaultValues: existingRate
+        ? {
+            courierId: existingRate.courierId,
+            destinationProvinceId: existingRate.destinationProvinceId,
+            destinationCityId: existingRate.destinationCityId,
+            basePrice: existingRate.basePrice,
+            estimatedDays: existingRate.estimatedDays || "",
+            isActive: existingRate.isActive,
+          }
+        : {
+            courierId: "",
+            destinationProvinceId: "",
+            destinationCityId: "",
+            basePrice: 0,
+            estimatedDays: "",
+            isActive: true,
+          },
+    });
 
   const selectedProvince = watch("destinationProvinceId");
 
@@ -149,7 +145,7 @@ export function AddRateDialog({
           toast.success(
             isEditing
               ? "Shipping rate updated successfully"
-              : "Shipping rate created successfully"
+              : "Shipping rate created successfully",
           );
           setOpen(false);
           reset();
@@ -178,173 +174,187 @@ export function AddRateDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Shipping Rate" : "Add Shipping Rate"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update the shipping rate details below."
-              : "Configure a new shipping rate for a destination."}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[500px] lg:max-w-[800px]">
+        <ScrollArea className="h-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit Shipping Rate" : "Add Shipping Rate"}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "Update the shipping rate details below."
+                : "Configure a new shipping rate for a destination."}
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <FieldGroup className="py-4">
-            {/* Courier */}
-            <Field>
-              <FieldLabel>Courier</FieldLabel>
-              <FieldDescription>Select the shipping courier</FieldDescription>
-              <FieldContent>
-                <Controller
-                  name="courierId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select courier..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {couriers.map((courier) => (
-                          <SelectItem key={courier.id} value={courier.id}>
-                            {courier.name} ({courier.code.toUpperCase()})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </FieldContent>
-            </Field>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <FieldGroup className="py-4">
+              {/* Courier */}
+              <Field>
+                <FieldLabel>Courier</FieldLabel>
+                <FieldDescription>Select the shipping courier</FieldDescription>
+                <FieldContent>
+                  <Controller
+                    name="courierId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isEditing}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select courier..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {couriers.map((courier) => (
+                            <SelectItem key={courier.id} value={courier.id}>
+                              {courier.name} ({courier.code.toUpperCase()})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </FieldContent>
+              </Field>
 
-            {/* Province */}
-            <Field>
-              <FieldLabel>Destination Province</FieldLabel>
-              <FieldDescription>Select the destination province</FieldDescription>
-              <FieldContent>
-                <Controller
-                  name="destinationProvinceId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={handleProvinceChange}
-                      disabled={isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select province..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {provinces.map((province) => (
-                          <SelectItem key={province.id} value={province.id}>
-                            {province.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </FieldContent>
-            </Field>
+              {/* Province */}
+              <Field>
+                <FieldLabel>Destination Province</FieldLabel>
+                <FieldDescription>
+                  Select the destination province
+                </FieldDescription>
+                <FieldContent>
+                  <Controller
+                    name="destinationProvinceId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={handleProvinceChange}
+                        disabled={isEditing}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select province..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {provinces.map((province) => (
+                            <SelectItem key={province.id} value={province.id}>
+                              {province.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </FieldContent>
+              </Field>
 
-            {/* City */}
-            <Field>
-              <FieldLabel>Destination City</FieldLabel>
-              <FieldDescription>Select the destination city</FieldDescription>
-              <FieldContent>
-                <Controller
-                  name="destinationCityId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={!selectedProvince || isLoadingCities || isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            isLoadingCities
-                              ? "Loading cities..."
-                              : !selectedProvince
-                              ? "Select province first"
-                              : "Select city..."
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {cities.map((city) => (
-                          <SelectItem key={city.id} value={city.id}>
-                            {city.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </FieldContent>
-            </Field>
+              {/* City */}
+              <Field>
+                <FieldLabel>Destination City</FieldLabel>
+                <FieldDescription>Select the destination city</FieldDescription>
+                <FieldContent>
+                  <Controller
+                    name="destinationCityId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={
+                          !selectedProvince || isLoadingCities || isEditing
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              isLoadingCities
+                                ? "Loading cities..."
+                                : !selectedProvince
+                                  ? "Select province first"
+                                  : "Select city..."
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cities.map((city) => (
+                            <SelectItem key={city.id} value={city.id}>
+                              {city.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </FieldContent>
+              </Field>
 
-            {/* Base Price */}
-            <Field>
-              <FieldLabel>Base Price (IDR)</FieldLabel>
-              <FieldDescription>Shipping cost to this destination</FieldDescription>
-              <FieldContent>
-                <Controller
-                  name="basePrice"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="number"
-                      min={1000}
-                      step={1000}
-                      placeholder="e.g., 15000"
-                      {...field}
-                    />
-                  )}
-                />
-              </FieldContent>
-            </Field>
+              {/* Base Price */}
+              <Field>
+                <FieldLabel>Base Price (IDR)</FieldLabel>
+                <FieldDescription>
+                  Shipping cost to this destination
+                </FieldDescription>
+                <FieldContent>
+                  <Controller
+                    name="basePrice"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        type="number"
+                        min={1000}
+                        step={1000}
+                        placeholder="e.g., 15000"
+                        {...field}
+                      />
+                    )}
+                  />
+                </FieldContent>
+              </Field>
 
-            {/* Estimated Days */}
-            <Field>
-              <FieldLabel>Estimated Delivery Days</FieldLabel>
-              <FieldDescription>Optional: e.g., &quot;2-3&quot; or &quot;3-5&quot;</FieldDescription>
-              <FieldContent>
-                <Controller
-                  name="estimatedDays"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., 2-3"
-                      {...field}
-                      value={field.value || ""}
-                    />
-                  )}
-                />
-              </FieldContent>
-            </Field>
-          </FieldGroup>
+              {/* Estimated Days */}
+              <Field>
+                <FieldLabel>Estimated Delivery Days</FieldLabel>
+                <FieldDescription>
+                  Optional: e.g., &quot;2-3&quot; or &quot;3-5&quot;
+                </FieldDescription>
+                <FieldContent>
+                  <Controller
+                    name="estimatedDays"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        placeholder="e.g., 2-3"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    )}
+                  />
+                </FieldContent>
+              </Field>
+            </FieldGroup>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving..." : isEditing ? "Update Rate" : "Create Rate"}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending
+                  ? "Saving..."
+                  : isEditing
+                    ? "Update Rate"
+                    : "Create Rate"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

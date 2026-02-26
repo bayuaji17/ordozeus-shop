@@ -8,6 +8,13 @@
       "when": 1770962239772,
       "tag": "0000_mute_infant_terrible",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772085367419,
+      "tag": "0001_furry_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

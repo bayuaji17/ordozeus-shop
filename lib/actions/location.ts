@@ -1,7 +1,6 @@
 "use server";
 
 import { cache } from "react";
-import { requireAdmin } from "@/lib/auth/server";
 
 const WILAYAH_API_URL = "https://wilayah-id.bandev.my.id";
 
@@ -33,6 +32,12 @@ interface DistrictData {
   regency_code: string;
 }
 
+interface VillageData {
+  code: string;
+  name: string;
+  district_code: string;
+}
+
 // Cache province fetch for request deduplication
 const fetchProvinces = cache(async (): Promise<LocationOption[]> => {
   const response = await fetch(`${WILAYAH_API_URL}/provinces`, {
@@ -56,7 +61,6 @@ const fetchProvinces = cache(async (): Promise<LocationOption[]> => {
 });
 
 export async function getProvinces() {
-  await requireAdmin();
   try {
     const provinces = await fetchProvinces();
     return provinces;
@@ -67,7 +71,6 @@ export async function getProvinces() {
 }
 
 export async function getCitiesByProvince(provinceId: string) {
-  await requireAdmin();
   try {
     const response = await fetch(`${WILAYAH_API_URL}/regencies/${provinceId}`, {
       next: { revalidate: 86400 }, // Cache for 24 hours
@@ -94,7 +97,6 @@ export async function getCitiesByProvince(provinceId: string) {
 }
 
 export async function getDistrictsByCity(cityId: string) {
-  await requireAdmin();
   try {
     const response = await fetch(`${WILAYAH_API_URL}/districts/${cityId}`, {
       next: { revalidate: 86400 }, // Cache for 24 hours
@@ -117,6 +119,35 @@ export async function getDistrictsByCity(cityId: string) {
   } catch (error) {
     console.error("Error fetching districts:", error);
     throw new Error("Failed to fetch districts");
+  }
+}
+
+export async function getVillagesByDistrict(districtId: string) {
+  try {
+    const response = await fetch(
+      `${WILAYAH_API_URL}/villages/${districtId}`,
+      {
+        next: { revalidate: 86400 }, // Cache for 24 hours
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch villages: ${response.status}`);
+    }
+
+    const result: WilayahApiResponse<VillageData> = await response.json();
+
+    if (!result.success) {
+      throw new Error("API returned unsuccessful response");
+    }
+
+    return result.data.map((village) => ({
+      id: village.code,
+      name: village.name,
+    }));
+  } catch (error) {
+    console.error("Error fetching villages:", error);
+    throw new Error("Failed to fetch villages");
   }
 }
 

@@ -331,3 +331,67 @@ export async function getShippingRateForCheckout(
     return null;
   }
 }
+
+/**
+ * Get the lowest available shipping rate for a city across all active couriers.
+ * City match takes priority; falls back to province if no city rate exists.
+ * No auth guard — safe for public checkout usage.
+ */
+export async function getLowestShippingRateForCity(
+  cityId: string
+): Promise<{ basePrice: number; estimatedDays: string | null } | null> {
+  try {
+    const provinceId = cityId.split(".")[0];
+
+    // 1. City-level match across all active couriers
+    const cityRates = await db
+      .select({
+        basePrice: shippingRates.basePrice,
+        estimatedDays: shippingRates.estimatedDays,
+      })
+      .from(shippingRates)
+      .where(
+        and(
+          eq(shippingRates.destinationCityId, cityId),
+          eq(shippingRates.isActive, true)
+        )
+      )
+      .orderBy(shippingRates.basePrice)
+      .limit(1);
+
+    if (cityRates.length > 0) {
+      return {
+        basePrice: cityRates[0].basePrice,
+        estimatedDays: cityRates[0].estimatedDays,
+      };
+    }
+
+    // 2. Province-level fallback
+    const provinceRates = await db
+      .select({
+        basePrice: shippingRates.basePrice,
+        estimatedDays: shippingRates.estimatedDays,
+      })
+      .from(shippingRates)
+      .where(
+        and(
+          eq(shippingRates.destinationProvinceId, provinceId),
+          eq(shippingRates.isActive, true)
+        )
+      )
+      .orderBy(shippingRates.basePrice)
+      .limit(1);
+
+    if (provinceRates.length > 0) {
+      return {
+        basePrice: provinceRates[0].basePrice,
+        estimatedDays: provinceRates[0].estimatedDays,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching lowest shipping rate:", error);
+    return null;
+  }
+}

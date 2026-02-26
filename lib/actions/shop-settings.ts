@@ -13,6 +13,8 @@ export interface ShopLocationData {
   cityName?: string;
   districtId?: string;
   districtName?: string;
+  villageId?: string;
+  villageName?: string;
   postalCode?: string;
   fullAddress?: string;
 }

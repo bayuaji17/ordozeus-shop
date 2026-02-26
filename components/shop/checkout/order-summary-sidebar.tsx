@@ -4,17 +4,28 @@ import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/currency";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useCheckoutStore } from "@/lib/stores/checkout-store";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 export function OrderSummarySidebar() {
   const { items, getSummary } = useCartStore();
+  const { shippingCost } = useCheckoutStore();
   const summary = getSummary();
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (items.length === 0) {
     return null;
   }
+
+  const total = summary.subtotal + (shippingCost ?? 0);
+
+  const shippingLabel =
+    shippingCost === null
+      ? "Select location first"
+      : shippingCost === 0
+        ? "Free"
+        : formatCurrency(shippingCost);
 
   return (
     <div className="bg-slate-50 rounded-2xl p-6 lg:p-8">
@@ -30,7 +41,7 @@ export function OrderSummarySidebar() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-semibold">{formatCurrency(summary.subtotal)}</span>
+          <span className="font-semibold">{formatCurrency(total)}</span>
           {isExpanded ? (
             <ChevronUp className="h-5 w-5 text-slate-400" />
           ) : (
@@ -40,9 +51,7 @@ export function OrderSummarySidebar() {
       </button>
 
       {/* Items List - Always visible on desktop, toggleable on mobile */}
-      <div
-        className={`space-y-4 ${isExpanded ? "block" : "hidden lg:block"}`}
-      >
+      <div className={`space-y-4 ${isExpanded ? "block" : "hidden lg:block"}`}>
         <div className="max-h-64 overflow-y-auto space-y-4 pr-2">
           {items.map((item) => (
             <div key={item.id} className="flex gap-4">
@@ -82,11 +91,21 @@ export function OrderSummarySidebar() {
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Subtotal</span>
-            <span className="font-medium">{formatCurrency(summary.subtotal)}</span>
+            <span className="font-medium">
+              {formatCurrency(summary.subtotal)}
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Shipping</span>
-            <span className="text-slate-500">Calculated at next step</span>
+            <span
+              className={
+                shippingCost === null
+                  ? "text-slate-400 italic"
+                  : "font-medium text-slate-900"
+              }
+            >
+              {shippingLabel}
+            </span>
           </div>
         </div>
 
@@ -94,7 +113,7 @@ export function OrderSummarySidebar() {
 
         <div className="flex justify-between items-center">
           <span className="text-base font-semibold">Total</span>
-          <span className="text-xl font-bold">{formatCurrency(summary.subtotal)}</span>
+          <span className="text-xl font-bold">{formatCurrency(total)}</span>
         </div>
       </div>
     </div>

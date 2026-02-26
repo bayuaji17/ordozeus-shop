@@ -7,12 +7,7 @@ import { CartSummary } from "./cart-summary";
 import { EmptyCart } from "./empty-cart";
 
 export function CartContent() {
-  const {
-    items,
-    updateQuantity,
-    removeItem,
-    getSummary,
-  } = useCartStore();
+  const { items, updateQuantity, removeItem, getSummary } = useCartStore();
 
   const summary = getSummary();
 
@@ -20,14 +15,14 @@ export function CartContent() {
     (itemId: string, quantity: number) => {
       return updateQuantity(itemId, quantity);
     },
-    [updateQuantity]
+    [updateQuantity],
   );
 
   const handleRemove = useCallback(
     (itemId: string) => {
       removeItem(itemId);
     },
-    [removeItem]
+    [removeItem],
   );
 
   if (items.length === 0) {
@@ -48,7 +43,8 @@ export function CartContent() {
               Shopping Cart
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              {summary.totalItems} item{summary.totalItems !== 1 ? "s" : ""} in your cart
+              {summary.totalItems} item{summary.totalItems !== 1 ? "s" : ""} in
+              your cart
             </p>
           </div>
           <div className="px-6">

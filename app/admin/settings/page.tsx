@@ -8,14 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  MapPin,
-  Ruler,
-  Truck,
-  Package,
-  Banknote,
-} from "lucide-react";
+import { ArrowRight, MapPin, Ruler, Truck, Banknote } from "lucide-react";
 
 interface SettingCardProps {
   icon: React.ReactNode;

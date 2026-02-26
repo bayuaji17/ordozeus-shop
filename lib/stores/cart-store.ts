@@ -130,7 +130,6 @@ export const useCartStore = create<CartStore>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ items: state.items }),
       version: 1,
-      skipHydration: true,
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {

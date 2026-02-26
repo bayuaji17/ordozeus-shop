@@ -2,13 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckoutForm } from "@/components/shop/checkout/checkout-form";
 import { OrderSummarySidebar } from "@/components/shop/checkout/order-summary-sidebar";
+import { getProvinces } from "@/lib/actions/location";
 
 export const metadata: Metadata = {
   title: "Checkout | OrdoZeus",
   description: "Complete your order",
 };
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  let provinces: { id: string; name: string }[] = [];
+  try {
+    provinces = await getProvinces();
+  } catch {
+    // Non-fatal: province dropdown will be empty, user can still try
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8">
@@ -34,7 +42,7 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
           {/* Checkout Form */}
           <div className="lg:col-span-2 order-2 lg:order-1">
-            <CheckoutForm />
+            <CheckoutForm provinces={provinces} />
           </div>
 
           {/* Order Summary */}

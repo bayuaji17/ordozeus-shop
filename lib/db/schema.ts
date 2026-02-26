@@ -418,11 +418,14 @@ export const shopSettings = pgTable("shop_settings", {
   provinceId: varchar("province_id", { length: 10 }),
   provinceName: varchar("province_name", { length: 100 }),
 
-  cityId: varchar("city_id", { length: 10 }),
+  cityId: varchar("city_id", { length: 20 }),
   cityName: varchar("city_name", { length: 100 }),
 
-  districtId: varchar("district_id", { length: 10 }),
+  districtId: varchar("district_id", { length: 20 }),
   districtName: varchar("district_name", { length: 100 }),
+
+  villageId: varchar("village_id", { length: 20 }),
+  villageName: varchar("village_name", { length: 250 }),
 
   postalCode: varchar("postal_code", { length: 10 }),
   fullAddress: text("full_address"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, Fragment } from "react";
 import {
   Card,
   CardContent,
@@ -28,6 +28,7 @@ import { saveShopLocation } from "@/lib/actions/shop-settings";
 import {
   getCitiesByProvince,
   getDistrictsByCity,
+  getVillagesByDistrict,
 } from "@/lib/actions/location";
 import { toast } from "sonner";
 import { MapPin, Check } from "lucide-react";
@@ -47,11 +48,14 @@ interface LocationFormProps {
     cityName?: string;
     districtId?: string;
     districtName?: string;
+    villageId?: string;
+    villageName?: string;
     postalCode?: string;
     fullAddress?: string;
   };
   preloadedCities?: LocationOption[];
   preloadedDistricts?: LocationOption[];
+  preloadedVillages?: LocationOption[];
 }
 
 export function LocationForm({
@@ -59,6 +63,7 @@ export function LocationForm({
   initialData,
   preloadedCities = [],
   preloadedDistricts = [],
+  preloadedVillages = [],
 }: LocationFormProps) {
   const [isPending, startTransition] = useTransition();
   const [isSaving, setIsSaving] = useState(false);
@@ -80,10 +85,16 @@ export function LocationForm({
         ? { id: initialData.districtId, name: initialData.districtName || "" }
         : null,
     );
+  const [selectedVillage, setSelectedVillage] = useState<LocationOption | null>(
+    initialData?.villageId
+      ? { id: initialData.villageId, name: initialData.villageName || "" }
+      : null,
+  );
 
   const [cities, setCities] = useState<LocationOption[]>(preloadedCities);
   const [districts, setDistricts] =
     useState<LocationOption[]>(preloadedDistricts);
+  const [villages, setVillages] = useState<LocationOption[]>(preloadedVillages);
 
   const [postalCode, setPostalCode] = useState(initialData?.postalCode || "");
   const [fullAddress, setFullAddress] = useState(
@@ -98,8 +109,10 @@ export function LocationForm({
       setSelectedProvince(province);
       setSelectedCity(null);
       setSelectedDistrict(null);
+      setSelectedVillage(null);
       setCities([]);
       setDistricts([]);
+      setVillages([]);
 
       startTransition(async () => {
         try {
@@ -120,7 +133,9 @@ export function LocationForm({
 
       setSelectedCity(city);
       setSelectedDistrict(null);
+      setSelectedVillage(null);
       setDistricts([]);
+      setVillages([]);
 
       startTransition(async () => {
         try {
@@ -137,15 +152,42 @@ export function LocationForm({
   const handleDistrictChange = useCallback(
     (districtId: string) => {
       const district = districts.find((d) => d.id === districtId);
-      if (district) {
-        setSelectedDistrict(district);
-      }
+      if (!district) return;
+
+      setSelectedDistrict(district);
+      setSelectedVillage(null);
+      setVillages([]);
+
+      startTransition(async () => {
+        try {
+          const data = await getVillagesByDistrict(districtId);
+          setVillages(data);
+        } catch {
+          toast.error("Failed to load villages");
+        }
+      });
     },
     [districts],
   );
 
+  const handleVillageChange = useCallback(
+    (villageId: string) => {
+      const village = villages.find((v) => v.id === villageId);
+      if (village) {
+        setSelectedVillage(village);
+      }
+    },
+    [villages],
+  );
+
   const handleSave = async () => {
-    if (!selectedProvince || !selectedCity || !selectedDistrict) return;
+    if (
+      !selectedProvince ||
+      !selectedCity ||
+      !selectedDistrict ||
+      !selectedVillage
+    )
+      return;
 
     setIsSaving(true);
     try {
@@ -156,6 +198,8 @@ export function LocationForm({
         cityName: selectedCity.name,
         districtId: selectedDistrict.id,
         districtName: selectedDistrict.name,
+        villageId: selectedVillage.id,
+        villageName: selectedVillage.name,
         postalCode: postalCode || undefined,
         fullAddress: fullAddress || undefined,
       });
@@ -172,10 +216,14 @@ export function LocationForm({
     }
   };
 
-  const isComplete = selectedProvince && selectedCity && selectedDistrict;
-  const progress = [selectedProvince, selectedCity, selectedDistrict].filter(
-    Boolean,
-  ).length;
+  const isComplete =
+    selectedProvince && selectedCity && selectedDistrict && selectedVillage;
+  const progress = [
+    selectedProvince,
+    selectedCity,
+    selectedDistrict,
+    selectedVillage,
+  ].filter(Boolean).length;
 
   return (
     <Card>
@@ -192,50 +240,36 @@ export function LocationForm({
       <CardContent className="space-y-6">
         {/* Progress Indicator */}
         <div className="flex items-center gap-2 text-sm">
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-              progress >= 1
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {progress >= 1 ? <Check className="h-3 w-3" /> : "1"}
-          </div>
-          <div
-            className={`h-0.5 w-8 ${progress >= 2 ? "bg-primary" : "bg-muted"}`}
-          />
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-              progress >= 2
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {progress >= 2 ? <Check className="h-3 w-3" /> : "2"}
-          </div>
-          <div
-            className={`h-0.5 w-8 ${progress >= 3 ? "bg-primary" : "bg-muted"}`}
-          />
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-              progress >= 3
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {progress >= 3 ? <Check className="h-3 w-3" /> : "3"}
-          </div>
+          {[1, 2, 3, 4].map((step, index) => (
+            <Fragment key={step}>
+              <div
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                  progress >= step
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {progress >= step ? <Check className="h-3 w-3" /> : step}
+              </div>
+              {index < 3 && (
+                <div
+                  className={`h-0.5 w-8 ${progress >= step + 1 ? "bg-primary" : "bg-muted"}`}
+                />
+              )}
+            </Fragment>
+          ))}
           <span className="ml-2 text-muted-foreground">
             {progress === 0 && "Select province"}
             {progress === 1 && "Select city"}
             {progress === 2 && "Select district"}
-            {progress === 3 && "Location complete"}
+            {progress === 3 && "Select village"}
+            {progress === 4 && "Location complete"}
           </span>
         </div>
 
         {/* Location Selectors */}
         <FieldGroup>
-          {/* Province - fetched on page load */}
+          {/* Province */}
           <Field>
             <FieldLabel>Province</FieldLabel>
             <FieldDescription>
@@ -260,7 +294,7 @@ export function LocationForm({
             </FieldContent>
           </Field>
 
-          {/* City - fetched on province select */}
+          {/* City */}
           <Field>
             <FieldLabel>City / Regency</FieldLabel>
             <FieldDescription>
@@ -290,7 +324,7 @@ export function LocationForm({
             </FieldContent>
           </Field>
 
-          {/* District - fetched on city select */}
+          {/* District */}
           <Field>
             <FieldLabel>District</FieldLabel>
             <FieldDescription>
@@ -313,6 +347,36 @@ export function LocationForm({
                   {districts.map((district) => (
                     <SelectItem key={district.id} value={district.id}>
                       {district.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldContent>
+          </Field>
+
+          {/* Village */}
+          <Field>
+            <FieldLabel>Village</FieldLabel>
+            <FieldDescription>
+              Select village (kelurahan/desa) within the district
+            </FieldDescription>
+            <FieldContent className="w-full">
+              <Select
+                value={selectedVillage?.id}
+                onValueChange={handleVillageChange}
+                disabled={!selectedDistrict || isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={
+                      isPending ? "Loading villages..." : "Select village..."
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  {villages.map((village) => (
+                    <SelectItem key={village.id} value={village.id}>
+                      {village.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

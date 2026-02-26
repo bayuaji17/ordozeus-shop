@@ -1,7 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getShopLocation } from "@/lib/actions/shop-settings";
-import { getProvinces, getCitiesByProvince, getDistrictsByCity } from "@/lib/actions/location";
+import {
+  getProvinces,
+  getCitiesByProvince,
+  getDistrictsByCity,
+  getVillagesByDistrict,
+} from "@/lib/actions/location";
 import { LocationForm } from "@/components/admin/settings/location-form";
 import { LocationSkeleton } from "@/components/admin/settings/location-skeleton";
 import { requireAdmin } from "@/lib/auth/server";
@@ -21,9 +26,10 @@ async function LocationContent() {
     getShopLocation(),
   ]);
 
-  // If we have existing location, preload cities and districts
+  // If we have existing location, preload cities, districts, and villages
   let preloadedCities: { id: string; name: string }[] = [];
   let preloadedDistricts: { id: string; name: string }[] = [];
+  let preloadedVillages: { id: string; name: string }[] = [];
 
   // Only preload if the stored provinceId exists in the fetched provinces
   // This handles cases where old mock data IDs don't match real wilayah API codes
@@ -44,6 +50,16 @@ async function LocationContent() {
       if (validCity && settings.cityId) {
         const districts = await getDistrictsByCity(settings.cityId);
         preloadedDistricts = districts;
+
+        // Only preload villages if the stored districtId exists in the fetched districts
+        const validDistrict = settings.districtId
+          ? districts.find((d) => d.id === settings.districtId)
+          : null;
+
+        if (validDistrict && settings.districtId) {
+          const villages = await getVillagesByDistrict(settings.districtId);
+          preloadedVillages = villages;
+        }
       }
     } catch {
       // Ignore preload errors, form will fetch on demand
@@ -60,11 +76,14 @@ async function LocationContent() {
         cityName: settings?.cityName || undefined,
         districtId: settings?.districtId || undefined,
         districtName: settings?.districtName || undefined,
+        villageId: settings?.villageId || undefined,
+        villageName: settings?.villageName || undefined,
         postalCode: settings?.postalCode || undefined,
         fullAddress: settings?.fullAddress || undefined,
       }}
       preloadedCities={preloadedCities}
       preloadedDistricts={preloadedDistricts}
+      preloadedVillages={preloadedVillages}
     />
   );
 }

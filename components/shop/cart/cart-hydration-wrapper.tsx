@@ -1,9 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { useCartStore } from "@/lib/stores/cart-store";
 
-// Simple hydration detection using useSyncExternalStore
-// This avoids the useEffect/setState pattern that causes lint errors
+// Simple mount detection using useSyncExternalStore (avoids useEffect/setState lint errors)
 const subscribe = () => () => {};
 const getSnapshot = () => true;
 const getServerSnapshot = () => false;
@@ -30,7 +30,6 @@ export function CartHydrationWrapper({
 }: CartHydrationWrapperProps) {
   const isMounted = useIsMounted();
 
-  // During SSR and initial hydration, show fallback
   if (!isMounted) {
     return fallback;
   }
@@ -39,9 +38,12 @@ export function CartHydrationWrapper({
 }
 
 /**
- * Hook for components that need to know if hydration is complete
- * Use this for conditional rendering based on hydration state
+ * Hook for components that need to know if the cart store has finished
+ * rehydrating from localStorage.
+ *
+ * Returns true only after Zustand persist has read and applied localStorage data,
+ * preventing the badge from flashing 0 before real cart data is loaded.
  */
 export function useCartHydration(): boolean {
-  return useIsMounted();
+  return useCartStore((state) => state.hasHydrated);
 }

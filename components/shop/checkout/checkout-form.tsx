@@ -18,35 +18,48 @@ import {
   FieldLegend,
 } from "@/components/ui/field";
 import { PaymentMethodCard } from "./payment-method-card";
-import { LocationSelector, LocationDetails } from "./location-selector";
+import { CheckoutLocationForm } from "./checkout-location-form";
 import { useCheckoutStore } from "@/lib/stores/checkout-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import type { CustomerInfo } from "@/lib/types/checkout";
 
 const locationSchema = z.object({
-  id: z.number(),
-  label: z.string(),
-  province: z.string(),
-  city: z.string(),
-  district: z.string(),
-  subdistrict: z.string(),
-  zipCode: z.string(),
+  provinceId: z.string().min(1),
+  provinceName: z.string().min(1),
+  cityId: z.string().min(1),
+  cityName: z.string().min(1),
+  districtId: z.string().min(1),
+  districtName: z.string().min(1),
+  villageId: z.string().min(1),
+  villageName: z.string().min(1),
 });
 
-const checkoutSchema = z.object({
-  name: z.string().min(2, "Full name is required"),
-  email: z.string().email("Valid email is required"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  address: z.string().min(10, "Full address is required"),
-  location: locationSchema.refine((val) => val != null, {
-    message: "Please select a location",
-  }),
-  paymentMethod: z.enum(["bank_transfer", "midtrans"]),
-});
+const checkoutSchema = z
+  .object({
+    name: z.string().min(2, "Full name is required"),
+    email: z.string().email("Valid email is required"),
+    phone: z.string().min(10, "Phone number must be at least 10 digits"),
+    address: z.string().min(10, "Full address is required"),
+    location: locationSchema.optional(),
+    paymentMethod: z.enum(["bank_transfer", "midtrans"]),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.location) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["location"],
+        message: "Please select a complete location (province → village)",
+      });
+    }
+  });
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
-export function CheckoutForm() {
+interface CheckoutFormProps {
+  provinces: { id: string; name: string }[];
+}
+
+export function CheckoutForm({ provinces }: CheckoutFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { setCustomerInfo, setPaymentMethod } = useCheckoutStore();
@@ -57,6 +70,7 @@ export function CheckoutForm() {
     register,
     handleSubmit,
     setValue,
+    trigger,
     control,
     formState: { errors },
   } = useForm<CheckoutFormData>({
@@ -67,23 +81,22 @@ export function CheckoutForm() {
   });
 
   const selectedPayment = useWatch({ control, name: "paymentMethod" });
-  const selectedLocation = useWatch({ control, name: "location" });
 
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
 
-    // Save to store with full location details
+    const loc = data.location!;
+
     const customerInfo: CustomerInfo = {
       name: data.name,
       email: data.email,
       phone: data.phone,
       address: data.address,
-      province: data.location.province,
-      city: data.location.city,
-      district: data.location.district,
-      subdistrict: data.location.subdistrict,
-      postalCode: data.location.zipCode,
-      destinationId: data.location.id,
+      province: loc.provinceName,
+      city: loc.cityName,
+      district: loc.districtName,
+      subdistrict: loc.villageName,
+      postalCode: "",
     };
 
     setCustomerInfo(customerInfo);
@@ -92,7 +105,6 @@ export function CheckoutForm() {
     // Simulate processing
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Redirect to confirmation
     router.push("/checkout/confirmation");
   };
 
@@ -175,35 +187,24 @@ export function CheckoutForm() {
             )}
           </Field>
 
-          <Field>
-            <FieldLabel>
-              Location
-              <span className="text-destructive ml-1">*</span>
-            </FieldLabel>
-            <Controller
-              name="location"
-              control={control}
-              render={({ field }) => (
-                <LocationSelector
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-            {errors.location && (
-              <FieldError errors={[{ message: errors.location.message }]} />
+          {/* Cascading Location Selector */}
+          <Controller
+            name="location"
+            control={control}
+            render={({ field }) => (
+              <CheckoutLocationForm
+                provinces={provinces}
+                value={field.value}
+                onChange={(val) => {
+                  field.onChange(val === null ? undefined : val);
+                  void trigger("location");
+                }}
+                disabled={isSubmitting}
+              />
             )}
-          </Field>
-
-          {/* Display selected location details */}
-          {selectedLocation && (
-            <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-              <p className="text-sm font-medium text-slate-900">
-                Selected Location Details
-              </p>
-              <LocationDetails location={selectedLocation} />
-            </div>
+          />
+          {errors.location && (
+            <FieldError errors={[{ message: errors.location.message }]} />
           )}
         </FieldSet>
 
@@ -247,7 +248,6 @@ export function CheckoutForm() {
   );
 }
 
-// Helper function for formatting
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",

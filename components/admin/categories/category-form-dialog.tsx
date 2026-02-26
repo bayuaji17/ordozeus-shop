@@ -37,21 +37,12 @@ import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { CategoryImageUpload } from "@/components/admin/categories/category-image-upload";
+import type { Category } from "@/lib/types/category";
 
 interface CategoryFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  category?: {
-    id: string;
-    name: string;
-    slug: string;
-    parentId: string | null;
-    level: number;
-    displayOrder: number;
-    isActive: boolean;
-    imageUrl?: string | null;
-    imageKey?: string | null;
-  };
+  category?: Category;
   allCategories: Array<{
     id: string;
     name: string;

@@ -29,24 +29,7 @@ import {
   getShippingRates,
 } from "@/lib/actions/shipping-rates";
 import { Truck, MapPin } from "lucide-react";
-
-interface Courier {
-  id: string;
-  name: string;
-  code: string;
-}
-
-interface Province {
-  id: string;
-  name: string;
-}
-
-interface ShopLocation {
-  provinceId?: string | null;
-  provinceName?: string | null;
-  cityId?: string | null;
-  cityName?: string | null;
-}
+import type { Courier, Province, ShopLocation } from "@/lib/types/settings";
 
 interface ShippingConfigFormProps {
   couriers: Courier[];
@@ -76,7 +59,7 @@ export function ShippingConfigForm({
         console.error("Error fetching rates:", error);
       }
     },
-    [selectedCourier]
+    [selectedCourier],
   );
 
   const handleCourierChange = (courierId: string) => {
@@ -121,7 +104,10 @@ export function ShippingConfigForm({
           ) : (
             <div className="text-sm text-muted-foreground">
               No origin location set. Please configure location in{" "}
-              <a href="/admin/settings/location" className="text-primary hover:underline">
+              <a
+                href="/admin/settings/location"
+                className="text-primary hover:underline"
+              >
                 Location Settings
               </a>
               .

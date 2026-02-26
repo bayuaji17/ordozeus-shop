@@ -28,14 +28,12 @@ import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
+import type { SizeTypeItem } from "@/lib/types/settings";
+
 interface SizeTypeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sizeType?: {
-    id: string;
-    name: string;
-    sortOrder: number;
-  };
+  sizeType?: SizeTypeItem;
   mode: "create" | "edit";
 }
 

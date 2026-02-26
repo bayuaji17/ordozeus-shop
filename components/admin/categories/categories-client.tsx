@@ -14,18 +14,7 @@ import { CategoryList } from "@/components/admin/categories/category-list";
 import { CategoryFormDialog } from "@/components/admin/categories/category-form-dialog";
 import { CategoryFilters } from "@/components/admin/categories/category-filters";
 import { Pagination } from "@/components/admin/pagination";
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  parentId: string | null;
-  level: number;
-  displayOrder: number;
-  isActive: boolean;
-  productCount: number;
-  childCount: number;
-}
+import type { CategoryListItem as Category } from "@/lib/types/category";
 
 interface CategoriesClientProps {
   categories: Category[];

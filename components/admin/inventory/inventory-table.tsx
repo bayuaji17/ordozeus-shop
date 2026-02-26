@@ -1,16 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-
-interface InventoryItem {
-  id: string;
-  productId: string;
-  productSizeId: string;
-  name: string;
-  sku: string | null;
-  stock: number;
-  status: string;
-  sizeInfo: string;
-  sizeType: string;
-}
+import type { AdminInventoryItem as InventoryItem } from "@/lib/types/inventory";
 
 interface InventoryTableProps {
   items: InventoryItem[];

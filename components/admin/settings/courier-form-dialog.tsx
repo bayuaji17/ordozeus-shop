@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { createCourier, updateCourier } from "@/lib/actions/couriers";
 import { toast } from "sonner";
-import type { CourierItem } from "./courier-list";
+import type { CourierItem } from "@/lib/types/settings";
 
 interface CourierFormDialogProps {
   open: boolean;

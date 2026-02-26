@@ -14,30 +14,10 @@ import { StockAdjustmentDialog } from "@/components/admin/inventory/stock-adjust
 import { InventoryHistory } from "@/components/admin/inventory/inventory-history";
 import { Pagination } from "@/components/admin/pagination";
 
-interface InventoryItem {
-  id: string;
-  productId: string;
-  productSizeId: string;
-  name: string;
-  sku: string | null;
-  stock: number;
-  status: string;
-  sizeInfo: string;
-  sizeType: string;
-}
-
-interface InventoryMovement {
-  id: string;
-  productId: string;
-  productSizeId: string | null;
-  type: "in" | "out" | "adjust";
-  quantity: number;
-  reason: string | null;
-  createdAt: Date;
-  productName: string | null;
-  sizeName: string | null;
-  sku: string | null;
-}
+import type {
+  AdminInventoryItem as InventoryItem,
+  AdminInventoryMovement as InventoryMovement,
+} from "@/lib/types/inventory";
 
 interface Pagination {
   page: number;

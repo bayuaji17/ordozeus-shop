@@ -30,20 +30,7 @@ import { deleteCategory, toggleCategoryStatus } from "@/lib/actions/categories";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  parentId: string | null;
-  level: number;
-  displayOrder: number;
-  isActive: boolean;
-  imageUrl?: string | null;
-  imageKey?: string | null;
-  productCount: number;
-  childCount: number;
-}
+import type { CategoryListItem as Category } from "@/lib/types/category";
 
 interface CategoryListProps {
   categories: Category[];

@@ -14,20 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-
-interface InventoryMovement {
-  id: string;
-  productId: string;
-  productSizeId: string | null;
-  type: "in" | "out" | "adjust";
-  quantity: number;
-  reason: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  productName: string | null;
-  sizeName: string | null;
-  sku: string | null;
-}
+import type { AdminInventoryMovement as InventoryMovement } from "@/lib/types/inventory";
 
 interface Pagination {
   page: number;

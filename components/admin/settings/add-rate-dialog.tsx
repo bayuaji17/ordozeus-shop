@@ -36,17 +36,7 @@ import { getCitiesByProvince } from "@/lib/actions/location";
 import { toast } from "sonner";
 import { Plus, Pencil } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Courier {
-  id: string;
-  name: string;
-  code: string;
-}
-
-interface Province {
-  id: string;
-  name: string;
-}
+import type { Courier, Province } from "@/lib/types/settings";
 
 interface AddRateDialogProps {
   couriers: Courier[];

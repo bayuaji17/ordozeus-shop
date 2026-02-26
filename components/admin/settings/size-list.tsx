@@ -23,15 +23,7 @@ import { MoreVertical, Edit, Trash2 } from "lucide-react";
 import { deleteSize } from "@/lib/actions/sizes";
 import { useRouter } from "next/navigation";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
-
-export interface SizeItem {
-  id: string;
-  name: string;
-  sizeTypeId: string;
-  sizeTypeName: string;
-  sortOrder: number;
-  productCount: number;
-}
+import type { SizeItem } from "@/lib/types/settings";
 
 interface SizeListProps {
   grouped: Record<string, SizeItem[]>;

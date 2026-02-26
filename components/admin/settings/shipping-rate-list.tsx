@@ -31,17 +31,7 @@ import { formatCurrency } from "@/lib/currency";
 import { toast } from "sonner";
 import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { AddRateDialog } from "./add-rate-dialog";
-
-interface Courier {
-  id: string;
-  name: string;
-  code: string;
-}
-
-interface Province {
-  id: string;
-  name: string;
-}
+import type { Courier, Province } from "@/lib/types/settings";
 
 interface ShippingRateListProps {
   rates: ShippingRate[];
@@ -140,7 +130,9 @@ export function ShippingRateList({
                   <TableCell>{formatCurrency(rate.basePrice)}</TableCell>
                   <TableCell>
                     {rate.estimatedDays ? (
-                      <Badge variant="secondary">{rate.estimatedDays} days</Badge>
+                      <Badge variant="secondary">
+                        {rate.estimatedDays} days
+                      </Badge>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
@@ -154,9 +146,7 @@ export function ShippingRateList({
                         }
                         disabled={isPending}
                       />
-                      <Badge
-                        variant={rate.isActive ? "default" : "secondary"}
-                      >
+                      <Badge variant={rate.isActive ? "default" : "secondary"}>
                         {rate.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>

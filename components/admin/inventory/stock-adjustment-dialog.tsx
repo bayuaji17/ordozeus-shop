@@ -19,18 +19,12 @@ import { adjustStock } from "@/lib/actions/inventory";
 import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Minus, Settings } from "lucide-react";
+import type { AdminInventoryItem } from "@/lib/types/inventory";
 
 interface StockAdjustmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  item: {
-    id: string;
-    productId: string;
-    productSizeId: string;
-    name: string;
-    sku: string | null;
-    stock: number;
-  } | null;
+  item: AdminInventoryItem | null;
 }
 
 export function StockAdjustmentDialog({

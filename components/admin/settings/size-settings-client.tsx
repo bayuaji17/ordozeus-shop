@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { SizeList, type SizeItem } from "@/components/admin/settings/size-list";
+import { SizeList } from "@/components/admin/settings/size-list";
+import type { SizeItem } from "@/lib/types/settings";
 import { SizeFormDialog } from "@/components/admin/settings/size-form-dialog";
 
 interface SizeSettingsClientProps {

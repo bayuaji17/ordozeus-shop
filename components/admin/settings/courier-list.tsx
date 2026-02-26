@@ -24,15 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteCourier } from "@/lib/actions/couriers";
 import { toast } from "sonner";
-
-export interface CourierItem {
-  id: string;
-  name: string;
-  code: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { CourierItem } from "@/lib/types/settings";
 
 interface CourierListProps {
   couriers: CourierItem[];
@@ -41,7 +33,9 @@ interface CourierListProps {
 
 export function CourierList({ couriers, onEdit }: CourierListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [courierToDelete, setCourierToDelete] = useState<CourierItem | null>(null);
+  const [courierToDelete, setCourierToDelete] = useState<CourierItem | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteClick = (courier: CourierItem) => {
@@ -134,8 +128,8 @@ export function CourierList({ couriers, onEdit }: CourierListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Courier</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{courierToDelete?.name}&quot;? This action
-              cannot be undone.
+              Are you sure you want to delete &quot;{courierToDelete?.name}
+              &quot;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

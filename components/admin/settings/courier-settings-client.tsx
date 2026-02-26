@@ -10,13 +10,9 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import {
-  CourierList,
-  type CourierItem,
-} from "@/components/admin/settings/courier-list";
-import {
-  CourierFormDialog,
-} from "@/components/admin/settings/courier-form-dialog";
+import { CourierList } from "@/components/admin/settings/courier-list";
+import type { CourierItem } from "@/lib/types/settings";
+import { CourierFormDialog } from "@/components/admin/settings/courier-form-dialog";
 
 interface CourierSettingsClientProps {
   couriers: CourierItem[];
@@ -26,7 +22,9 @@ export function CourierSettingsClient({
   couriers,
 }: CourierSettingsClientProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCourier, setEditingCourier] = useState<CourierItem | undefined>();
+  const [editingCourier, setEditingCourier] = useState<
+    CourierItem | undefined
+  >();
 
   const handleEdit = (courier: CourierItem) => {
     setEditingCourier(courier);

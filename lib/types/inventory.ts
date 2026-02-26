@@ -17,6 +17,36 @@ import type { ProductStatus } from "./product";
 export type MovementType = "in" | "out" | "adjust";
 
 // ============================================================================
+// Admin Inventory Types
+// ============================================================================
+
+export interface AdminInventoryItem {
+  id: ID;
+  productId: string;
+  productSizeId: string;
+  name: string;
+  sku: string | null;
+  stock: number;
+  status: string;
+  sizeInfo: string;
+  sizeType: string;
+}
+
+export interface AdminInventoryMovement {
+  id: ID;
+  productId: string;
+  productSizeId: string | null;
+  type: MovementType;
+  quantity: number;
+  reason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  productName: string | null;
+  sizeName: string | null;
+  sku: string | null;
+}
+
+// ============================================================================
 // Inventory Item Types
 // ============================================================================
 

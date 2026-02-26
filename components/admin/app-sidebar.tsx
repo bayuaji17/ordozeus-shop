@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -13,6 +14,9 @@ import {
   FolderTree,
   PackageOpen,
   Image,
+  ChevronRight,
+  Layers,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import {
@@ -24,13 +28,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { signOut, useSession } from "@/lib/auth-client";
 
-// Menu items with icons
+// Flat menu items
 const menuItems = [
   {
     title: "Dashboard",
@@ -51,11 +58,6 @@ const menuItems = [
     title: "Categories",
     url: "/admin/categories",
     icon: FolderTree,
-  },
-  {
-    title: "Inventory",
-    url: "/admin/inventory",
-    icon: PackageOpen,
   },
   {
     title: "Carousel",
@@ -79,10 +81,27 @@ const menuItems = [
   },
 ];
 
+// Inventory sub-menu
+const inventorySubItems = [
+  {
+    title: "Stock Levels",
+    url: "/admin/inventory",
+    icon: Layers,
+  },
+  {
+    title: "Movements",
+    url: "/admin/inventory/movements",
+    icon: ArrowLeftRight,
+  },
+];
+
 export function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  const isInventoryActive = pathname.startsWith("/admin/inventory");
+  const [inventoryOpen, setInventoryOpen] = useState(isInventoryActive);
 
   const handleSignOut = async () => {
     await signOut();
@@ -114,6 +133,42 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+
+              {/* Inventory — collapsible with sub-menu */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={isInventoryActive}
+                  onClick={() => setInventoryOpen((o) => !o)}
+                >
+                  <PackageOpen />
+                  <span>Inventory</span>
+                  <ChevronRight
+                    className={`ml-auto h-4 w-4 transition-transform ${
+                      inventoryOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </SidebarMenuButton>
+                {inventoryOpen && (
+                  <SidebarMenuSub>
+                    {inventorySubItems.map((sub) => {
+                      const isSubActive =
+                        sub.url === "/admin/inventory"
+                          ? pathname === sub.url
+                          : pathname.startsWith(sub.url);
+                      return (
+                        <SidebarMenuSubItem key={sub.title}>
+                          <SidebarMenuSubButton asChild isActive={isSubActive}>
+                            <a href={sub.url}>
+                              <sub.icon className="h-4 w-4" />
+                              <span>{sub.title}</span>
+                            </a>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -226,6 +226,7 @@ export const inventoryMovements = pgTable("inventory_movements", {
   reason: varchar("reason", { length: 100 }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // ============================================================================

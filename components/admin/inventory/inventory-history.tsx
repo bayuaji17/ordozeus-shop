@@ -9,6 +9,7 @@ interface InventoryMovement {
   quantity: number;
   reason: string | null;
   createdAt: Date;
+  updatedAt: Date;
   productName: string | null;
   sizeName: string | null;
   sku: string | null;

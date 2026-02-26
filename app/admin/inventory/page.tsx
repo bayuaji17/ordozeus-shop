@@ -19,14 +19,14 @@ async function InventoryContent({ searchParams }: InventoryPageProps) {
   const params = await searchParams;
   const page = params.page ? parseInt(params.page) : 1;
 
-  const [inventoryData, recentMovements] = await Promise.all([
+  const [inventoryData, { movements: recentMovements }] = await Promise.all([
     getInventoryOverview({
       search: params.search,
       stockLevel: params.stockLevel || "all",
       page,
       limit: 10,
     }),
-    getInventoryHistory(undefined, undefined, 10),
+    getInventoryHistory({ limit: 10 }),
   ]);
 
   return (

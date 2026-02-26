@@ -221,15 +221,64 @@ export async function bulkAdjustStock(data: BulkStockAdjustmentFormData) {
 }
 
 /**
- * Get inventory movement history
+ * Get paginated inventory movement history with optional filters
  */
 export async function getInventoryHistory(
-  productId?: string,
-  productSizeId?: string,
-  limit = 50,
+  options: {
+    type?: "in" | "out" | "adjust";
+    search?: string;
+    page?: number;
+    limit?: number;
+    productId?: string;
+    productSizeId?: string;
+  } = {},
 ) {
+  const { type, search, page = 1, limit = 20, productId, productSizeId } =
+    options;
+  const offset = (page - 1) * limit;
+
   try {
-    let query = db
+    const conditions = [];
+
+    if (type) {
+      conditions.push(eq(inventoryMovements.type, type));
+    }
+
+    if (productId) {
+      conditions.push(eq(inventoryMovements.productId, productId));
+    }
+
+    if (productSizeId) {
+      conditions.push(eq(inventoryMovements.productSizeId, productSizeId));
+    }
+
+    if (search) {
+      conditions.push(
+        or(
+          like(products.name, `%${search}%`),
+          like(productSizes.sku, `%${search}%`),
+        ),
+      );
+    }
+
+    const whereClause =
+      conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Count total
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(inventoryMovements)
+      .leftJoin(products, eq(inventoryMovements.productId, products.id))
+      .leftJoin(
+        productSizes,
+        eq(inventoryMovements.productSizeId, productSizes.id),
+      )
+      .where(whereClause ?? sql`true`);
+
+    const total = Number(countResult[0]?.count ?? 0);
+
+    // Fetch page
+    const movements = await db
       .select({
         id: inventoryMovements.id,
         productId: inventoryMovements.productId,
@@ -238,6 +287,7 @@ export async function getInventoryHistory(
         quantity: inventoryMovements.quantity,
         reason: inventoryMovements.reason,
         createdAt: inventoryMovements.createdAt,
+        updatedAt: inventoryMovements.updatedAt,
         productName: products.name,
         sizeName: sizes.name,
         sku: productSizes.sku,
@@ -249,27 +299,20 @@ export async function getInventoryHistory(
         eq(inventoryMovements.productSizeId, productSizes.id),
       )
       .leftJoin(sizes, eq(productSizes.sizeId, sizes.id))
-      .$dynamic();
-
-    const conditions = [];
-
-    if (productId) {
-      conditions.push(eq(inventoryMovements.productId, productId));
-    }
-
-    if (productSizeId) {
-      conditions.push(eq(inventoryMovements.productSizeId, productSizeId));
-    }
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    const movements = await query
+      .where(whereClause ?? sql`true`)
       .orderBy(desc(inventoryMovements.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
 
-    return movements;
+    return {
+      movements,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   } catch (error) {
     console.error("Error fetching inventory history:", error);
     throw new Error("Failed to fetch inventory history");

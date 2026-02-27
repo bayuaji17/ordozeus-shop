@@ -14,6 +14,7 @@ import {
   FieldContent,
   FieldGroup,
 } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   getCitiesByProvince,
   getDistrictsByCity,
@@ -38,6 +39,7 @@ export interface CheckoutLocationValue {
   districtName: string;
   villageId: string;
   villageName: string;
+  postalCode?: string;
 }
 
 interface CheckoutLocationFormProps {
@@ -63,6 +65,7 @@ export function CheckoutLocationForm({
   const [selectedVillage, setSelectedVillage] = useState<LocationOption | null>(
     null,
   );
+  const [postalCode, setPostalCode] = useState("");
 
   const [cities, setCities] = useState<LocationOption[]>([]);
   const [districts, setDistricts] = useState<LocationOption[]>([]);
@@ -86,6 +89,7 @@ export function CheckoutLocationForm({
           districtName: district.name,
           villageId: village.id,
           villageName: village.name,
+          postalCode,
         });
 
         // Auto-calculate shipping from city
@@ -102,7 +106,7 @@ export function CheckoutLocationForm({
         setShipping(null);
       }
     },
-    [onChange, setShipping],
+    [onChange, setShipping, postalCode],
   );
 
   const handleProvinceChange = useCallback(
@@ -191,7 +195,9 @@ export function CheckoutLocationForm({
 
       {/* Province */}
       <Field>
-        <FieldLabel htmlFor="checkout-province">Province *</FieldLabel>
+        <FieldLabel htmlFor="checkout-province">
+          Province <span className="text-destructive">*</span>
+        </FieldLabel>
         <FieldContent>
           <Select
             value={selectedProvince?.id ?? ""}
@@ -214,7 +220,9 @@ export function CheckoutLocationForm({
 
       {/* City */}
       <Field>
-        <FieldLabel htmlFor="checkout-city">City / Regency *</FieldLabel>
+        <FieldLabel htmlFor="checkout-city">
+          City / Regency <span className="text-destructive">*</span>
+        </FieldLabel>
         <FieldContent>
           <Select
             value={selectedCity?.id ?? ""}
@@ -243,7 +251,9 @@ export function CheckoutLocationForm({
 
       {/* District */}
       <Field>
-        <FieldLabel htmlFor="checkout-district">District *</FieldLabel>
+        <FieldLabel htmlFor="checkout-district">
+          District <span className="text-destructive">*</span>
+        </FieldLabel>
         <FieldContent>
           <Select
             value={selectedDistrict?.id ?? ""}
@@ -272,7 +282,9 @@ export function CheckoutLocationForm({
 
       {/* Village */}
       <Field>
-        <FieldLabel htmlFor="checkout-village">Village *</FieldLabel>
+        <FieldLabel htmlFor="checkout-village">
+          Village <span className="text-destructive">*</span>
+        </FieldLabel>
         <FieldContent>
           <Select
             value={selectedVillage?.id ?? ""}
@@ -296,6 +308,47 @@ export function CheckoutLocationForm({
               ))}
             </SelectContent>
           </Select>
+        </FieldContent>
+      </Field>
+
+      {/* Postal Code */}
+      <Field>
+        <FieldLabel htmlFor="checkout-postal-code">
+          Postal Code <span className="text-destructive">*</span>
+        </FieldLabel>
+        <FieldContent>
+          <Input
+            id="checkout-postal-code"
+            type="text"
+            inputMode="numeric"
+            maxLength={10}
+            placeholder="e.g. 12345"
+            value={postalCode}
+            disabled={disabled}
+            onChange={(e) => {
+              const val = e.target.value;
+              setPostalCode(val);
+              // Re-notify parent with updated postalCode if location is complete
+              if (
+                selectedProvince &&
+                selectedCity &&
+                selectedDistrict &&
+                selectedVillage
+              ) {
+                onChange({
+                  provinceId: selectedProvince.id,
+                  provinceName: selectedProvince.name,
+                  cityId: selectedCity.id,
+                  cityName: selectedCity.name,
+                  districtId: selectedDistrict.id,
+                  districtName: selectedDistrict.name,
+                  villageId: selectedVillage.id,
+                  villageName: selectedVillage.name,
+                  postalCode: val,
+                });
+              }
+            }}
+          />
         </FieldContent>
       </Field>
     </FieldGroup>

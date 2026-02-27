@@ -17,9 +17,9 @@ const PAYMENT_METHODS = {
     description: "BCA, BNI, Mandiri",
     note: "Manual verification",
   },
-  midtrans: {
+  ipaymu: {
     icon: CreditCard,
-    title: "Midtrans",
+    title: "iPaymu",
     description: "Credit/Debit Card, E-wallet, QRIS, VA",
     note: "Online payment",
   },
@@ -41,13 +41,13 @@ export function PaymentMethodCard({
         "w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left",
         selected
           ? "border-black bg-black/5"
-          : "border-slate-200 hover:border-slate-300 bg-white"
+          : "border-slate-200 hover:border-slate-300 bg-white",
       )}
     >
       <div
         className={cn(
           "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
-          selected ? "bg-black text-white" : "bg-slate-100 text-slate-600"
+          selected ? "bg-black text-white" : "bg-slate-100 text-slate-600",
         )}
       >
         <Icon className="h-5 w-5" />
@@ -62,9 +62,7 @@ export function PaymentMethodCard({
         <span
           className={cn(
             "text-xs px-2 py-1 rounded-full",
-            selected
-              ? "bg-black text-white"
-              : "bg-slate-100 text-slate-600"
+            selected ? "bg-black text-white" : "bg-slate-100 text-slate-600",
           )}
         >
           {config.note}

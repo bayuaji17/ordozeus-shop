@@ -11,7 +11,7 @@ export interface CustomerInfo {
   destinationId?: number; // Shipping destination ID for shipping calculations
 }
 
-export type PaymentMethod = "bank_transfer" | "midtrans";
+export type PaymentMethod = "bank_transfer" | "ipaymu";
 
 export interface CheckoutData {
   customerInfo: CustomerInfo;

@@ -21,6 +21,16 @@ export const productStatusEnum = pgEnum("product_status", [
   "archived",
 ]);
 
+export const orderStatusEnum = pgEnum("order_status", [
+  "PENDING",
+  "EXPIRED",
+  "PAID",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "COMPLETED",
+]);
+
 export const inventoryTypeEnum = pgEnum("inventory_type", [
   "in",
   "out",
@@ -326,6 +336,58 @@ export const carousels = pgTable("carousels", {
 });
 
 // ============================================================================
+// ORDERS & ORDER ITEMS
+// ============================================================================
+
+export const orders = pgTable("orders", {
+  id: varchar("id", { length: 50 }).primaryKey(), // Generated logically like ORD-YYYYMMDD-XXXX
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+
+  status: orderStatusEnum("status").default("PENDING").notNull(),
+  totalAmount: integer("total_amount").notNull(), // IDR cents
+
+  // iPaymu Tracking
+  ipaymuSessionId: varchar("ipaymu_session_id", { length: 255 }),
+  ipaymuTrxId: varchar("ipaymu_trx_id", { length: 255 }),
+  ipaymuPaymentUrl: text("ipaymu_payment_url"),
+
+  // Snapshot of Customer Info
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  customerEmail: varchar("customer_email", { length: 255 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 50 }).notNull(),
+  shippingAddress: text("shipping_address").notNull(),
+  shippingCity: varchar("shipping_city", { length: 100 }),
+  shippingProvince: varchar("shipping_province", { length: 100 }),
+  shippingPostalCode: varchar("shipping_postal_code", { length: 20 }),
+
+  // Shipping
+  courier: varchar("courier", { length: 50 }),
+  shippingCost: integer("shipping_cost").default(0).notNull(),
+  trackingNumber: varchar("tracking_number", { length: 100 }),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const orderItems = pgTable("order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: varchar("order_id", { length: 50 }).notNull().references(() => orders.id, { onDelete: "cascade" }),
+  
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "restrict" }),
+  productSizeId: uuid("product_size_id").references(() => productSizes.id, { onDelete: "restrict" }),
+
+  // Snapshots at time of purchase
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  sizeName: varchar("size_name", { length: 50 }),
+  sku: varchar("sku", { length: 100 }),
+  price: integer("price").notNull(), // IDR cents
+  quantity: integer("quantity").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -406,6 +468,29 @@ export const productImagesRelations = relations(productImages, ({ one }) => ({
     fields: [productImages.productId],
     references: [products.id],
   }),
+}));
+
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  user: one(user, {
+    fields: [orders.userId],
+    references: [user.id],
+  }),
+  items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  product: one(products, {
+    fields: [orderItems.productId],
+    references: [products.id],
+  }),
+  size: one(productSizes, {
+    fields: [orderItems.productSizeId],
+    references: [productSizes.id],
+  })
 }));
 
 // ============================================================================

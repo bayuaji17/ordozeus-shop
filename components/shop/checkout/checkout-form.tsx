@@ -22,6 +22,7 @@ import { CheckoutLocationForm } from "./checkout-location-form";
 import { useCheckoutStore } from "@/lib/stores/checkout-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import type { CustomerInfo } from "@/lib/types/checkout";
+import { formatCurrency } from "@/lib/currency";
 
 const locationSchema = z.object({
   provinceId: z.string().min(1),
@@ -32,16 +33,17 @@ const locationSchema = z.object({
   districtName: z.string().min(1),
   villageId: z.string().min(1),
   villageName: z.string().min(1),
+  postalCode: z.string().min(1, "Postal code is required"),
 });
 
 const checkoutSchema = z
   .object({
     name: z.string().min(2, "Full name is required"),
-    email: z.string().email("Valid email is required"),
+    email: z.email("Valid email is required"),
     phone: z.string().min(10, "Phone number must be at least 10 digits"),
     address: z.string().min(10, "Full address is required"),
     location: locationSchema.optional(),
-    paymentMethod: z.enum(["bank_transfer", "midtrans"]),
+    paymentMethod: z.enum(["bank_transfer", "ipaymu"]),
   })
   .superRefine((data, ctx) => {
     if (!data.location) {
@@ -62,9 +64,11 @@ interface CheckoutFormProps {
 export function CheckoutForm({ provinces }: CheckoutFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setCustomerInfo, setPaymentMethod } = useCheckoutStore();
+  const { setCustomerInfo, setPaymentMethod, shippingCost } =
+    useCheckoutStore();
   const { getSummary } = useCartStore();
   const summary = getSummary();
+  const total = summary.subtotal + (shippingCost ?? 0);
 
   const {
     register,
@@ -85,27 +89,75 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
 
-    const loc = data.location!;
+    try {
+      const loc = data.location!;
 
-    const customerInfo: CustomerInfo = {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      address: data.address,
-      province: loc.provinceName,
-      city: loc.cityName,
-      district: loc.districtName,
-      subdistrict: loc.villageName,
-      postalCode: "",
-    };
+      const customerInfo: CustomerInfo = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        province: loc.provinceName,
+        city: loc.cityName,
+        district: loc.districtName,
+        subdistrict: loc.villageName,
+        postalCode: loc.postalCode || "",
+      };
 
-    setCustomerInfo(customerInfo);
-    setPaymentMethod(data.paymentMethod);
+      setCustomerInfo(customerInfo);
+      setPaymentMethod(data.paymentMethod);
 
-    // Simulate processing
-    await new Promise((resolve) => setTimeout(resolve, 500));
+      if (data.paymentMethod === "ipaymu") {
+        const payload = {
+          customerName: customerInfo.name,
+          customerEmail: customerInfo.email,
+          customerPhone: customerInfo.phone,
+          shippingAddress: `${customerInfo.address}, ${customerInfo.subdistrict}, ${customerInfo.district}`,
+          shippingCity: customerInfo.city,
+          shippingProvince: customerInfo.province,
+          shippingPostalCode: customerInfo.postalCode,
+          shippingCost: shippingCost ?? 0,
+          items: useCartStore.getState().items.map((item) => ({
+            productId: item.productId,
+            sizeId: item.sizeId || undefined,
+            sizeName: item.sizeName || undefined,
+            quantity: item.quantity,
+          })),
+          returnUrl: `${window.location.origin}/checkout/confirmation`,
+          cancelUrl: `${window.location.origin}/checkout`,
+          notifyUrl: `${window.location.origin}/api/webhooks/ipaymu`,
+        };
 
-    router.push("/checkout/confirmation");
+        const res = await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => null);
+          console.error("Checkout failed:", errorData);
+          alert("Failed to create order. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const responseData = await res.json();
+
+        // Redirect to iPaymu Payment Page
+        useCartStore.getState().clearCart(); // optional: clear cart
+        router.push(responseData.paymentUrl);
+        return;
+      }
+
+      // Bank Transfer fallback processing (mock)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      router.push("/checkout/confirmation");
+    } catch (err) {
+      console.error("Order submit Error:", err);
+      alert("An unexpected error occurred.");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -221,9 +273,9 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
               onSelect={() => setValue("paymentMethod", "bank_transfer")}
             />
             <PaymentMethodCard
-              method="midtrans"
-              selected={selectedPayment === "midtrans"}
-              onSelect={() => setValue("paymentMethod", "midtrans")}
+              method="ipaymu"
+              selected={selectedPayment === "ipaymu"}
+              onSelect={() => setValue("paymentMethod", "ipaymu")}
             />
           </div>
 
@@ -241,18 +293,9 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
         >
           {isSubmitting
             ? "Processing..."
-            : `Complete Order - ${formatCurrency(summary.subtotal)}`}
+            : `Complete Order - ${formatCurrency(total)}`}
         </Button>
       </FieldGroup>
     </form>
   );
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }

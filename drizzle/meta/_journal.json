@@ -15,6 +15,13 @@
       "when": 1772085367419,
       "tag": "0001_furry_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772133112802,
+      "tag": "0002_orange_exodus",
+      "breakpoints": true
     }
   ]
 }

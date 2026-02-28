@@ -136,6 +136,18 @@ export async function POST(req: Request) {
     const shippingCostValue = payload.shippingCost ?? 0;
     totalAmount += shippingCostValue;
 
+    // iPaymu calculates the charged amount itself from sum(price[i] × qty[i]).
+    // The `amount` field is ignored by iPaymu. So shipping MUST be added as
+    // a separate line item here — otherwise iPaymu only charges product prices.
+    if (shippingCostValue > 0) {
+      const shippingLabel = payload.courier
+        ? `Shipping (${payload.courier})`
+        : "Shipping";
+      ipaymuProductNames.push(shippingLabel);
+      ipaymuQtys.push("1");
+      ipaymuPrices.push(shippingCostValue.toString());
+    }
+
     // 1. Create order
     // 2. Create order items
     // 3. Obtain iPaymu URL
@@ -168,7 +180,7 @@ export async function POST(req: Request) {
             qty: ipaymuQtys,
             price: ipaymuPrices,
             amount: totalAmount.toString(),
-            returnUrl: payload.returnUrl,
+            returnUrl: `${payload.returnUrl}?orderId=${orderId}`,
             cancelUrl: payload.cancelUrl,
             notifyUrl: payload.notifyUrl,
             referenceId: orderId,

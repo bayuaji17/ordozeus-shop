@@ -1,45 +1,88 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, Copy, Building2, CreditCard } from "lucide-react";
+import {
+  CheckCircle,
+  Clock,
+  Package,
+  Truck,
+  CircleCheck,
+  ExternalLink,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
-import { useCheckoutStore } from "@/lib/stores/checkout-store";
-import { useCartStore } from "@/lib/stores/cart-store";
+import { getOrderForConfirmation } from "@/lib/actions/orders";
 import { BANK_ACCOUNTS } from "@/lib/types/checkout";
+import { CopyButton } from "@/components/shop/checkout/copy-button";
 
-export default function ConfirmationPage() {
-  const router = useRouter();
-  const { customerInfo, paymentMethod, clearCheckout } = useCheckoutStore();
-  const { getSummary, clearCart } = useCartStore();
-  const summary = getSummary();
-  const [orderId] = useState<string>(() =>
-    `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
-  );
+export const metadata: Metadata = {
+  title: "Order Confirmation | OrdoZeus",
+  description: "Your order has been placed",
+};
 
-  // Redirect if no checkout data
-  useEffect(() => {
-    if (!customerInfo || !paymentMethod) {
-      router.push("/checkout");
-    }
-  }, [customerInfo, paymentMethod, router]);
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; icon: React.ReactNode }
+> = {
+  PENDING: {
+    label: "Awaiting Payment",
+    color: "bg-amber-100 text-amber-800 border-amber-200",
+    icon: <Clock className="h-4 w-4" />,
+  },
+  PAID: {
+    label: "Payment Confirmed",
+    color: "bg-green-100 text-green-800 border-green-200",
+    icon: <CircleCheck className="h-4 w-4" />,
+  },
+  PROCESSING: {
+    label: "Processing",
+    color: "bg-blue-100 text-blue-800 border-blue-200",
+    icon: <Package className="h-4 w-4" />,
+  },
+  SHIPPED: {
+    label: "Shipped",
+    color: "bg-purple-100 text-purple-800 border-purple-200",
+    icon: <Truck className="h-4 w-4" />,
+  },
+  DELIVERED: {
+    label: "Delivered",
+    color: "bg-teal-100 text-teal-800 border-teal-200",
+    icon: <CircleCheck className="h-4 w-4" />,
+  },
+  COMPLETED: {
+    label: "Completed",
+    color: "bg-slate-100 text-slate-800 border-slate-200",
+    icon: <CircleCheck className="h-4 w-4" />,
+  },
+  EXPIRED: {
+    label: "Expired",
+    color: "bg-red-100 text-red-800 border-red-200",
+    icon: <Clock className="h-4 w-4" />,
+  },
+};
 
-  const handleCopyAccount = (accountNumber: string) => {
-    navigator.clipboard.writeText(accountNumber);
-  };
+interface PageProps {
+  searchParams: Promise<{ orderId?: string }>;
+}
 
-  const handleComplete = () => {
-    clearCheckout();
-    clearCart();
-    router.push("/products");
-  };
+export default async function ConfirmationPage({ searchParams }: PageProps) {
+  const { orderId } = await searchParams;
 
-  if (!customerInfo || !paymentMethod) {
-    return null;
+  if (!orderId) {
+    redirect("/checkout");
   }
+
+  const order = await getOrderForConfirmation(orderId);
+
+  if (!order) {
+    redirect("/checkout");
+  }
+
+  const status = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.PENDING;
+  const subtotal = order.totalAmount - order.shippingCost;
+  const isPending = order.status === "PENDING";
 
   return (
     <div className="min-h-screen bg-white py-12">
@@ -50,156 +93,233 @@ export default function ConfirmationPage() {
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
           <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-2">
-            Order Placed Successfully
+            Order Placed Successfully!
           </h1>
           <p className="text-slate-500">
-            Thank you for your order. Please complete your payment to proceed.
+            Thank you, <strong>{order.customerName}</strong>. Please complete
+            your payment to process your order.
           </p>
         </div>
 
-        {/* Order Details Card */}
+        {/* Order Summary Card */}
         <div className="bg-slate-50 rounded-2xl p-6 md:p-8 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-slate-500">Order ID</span>
-            <span className="font-mono font-medium">{orderId}</span>
+          {/* Order ID + Status */}
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div>
+              <p className="text-xs text-slate-500 mb-0.5">Order ID</p>
+              <p className="font-mono font-semibold text-slate-900 text-lg">
+                {order.id}
+              </p>
+            </div>
+            <Badge
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium ${status.color}`}
+            >
+              {status.icon}
+              {status.label}
+            </Badge>
           </div>
 
-          <Separator className="my-4" />
+          <p className="text-xs text-slate-400 mb-6">
+            Placed on{" "}
+            {new Date(order.createdAt).toLocaleDateString("id-ID", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
 
-          {/* Customer Info */}
-          <div className="space-y-3 mb-6">
-            <p className="text-sm font-medium text-slate-900">Customer Details</p>
-            <div className="text-sm text-slate-600">
-              <p className="font-medium text-slate-900">{customerInfo.name}</p>
-              <p>{customerInfo.email}</p>
-              <p>{customerInfo.phone}</p>
-              <p className="mt-2">{customerInfo.address}</p>
-              <p>
-                {customerInfo.subdistrict}, {customerInfo.district}
-              </p>
-              <p>
-                {customerInfo.city}, {customerInfo.province} {customerInfo.postalCode}
-              </p>
+          <Separator className="mb-6" />
+
+          {/* Product Items */}
+          <div className="space-y-4 mb-6">
+            <p className="text-sm font-semibold text-slate-900">
+              Order Items ({order.items.length})
+            </p>
+            {order.items.map((item) => (
+              <div key={item.id} className="flex items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900">
+                    {item.productName}
+                  </p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    {item.sizeName && (
+                      <span className="text-xs text-slate-500 bg-slate-200 rounded px-1.5 py-0.5">
+                        {item.sizeName}
+                      </span>
+                    )}
+                    {item.sku && (
+                      <span className="text-xs text-slate-400">
+                        SKU: {item.sku}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatCurrency(item.price * item.quantity)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {item.quantity} × {formatCurrency(item.price)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Separator className="mb-6" />
+
+          {/* Totals */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Subtotal</span>
+              <span className="font-medium">{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">
+                Shipping{order.courier ? ` (${order.courier})` : ""}
+              </span>
+              <span className="font-medium">
+                {order.shippingCost === 0
+                  ? "Free"
+                  : formatCurrency(order.shippingCost)}
+              </span>
             </div>
           </div>
 
           <Separator className="my-4" />
 
-          {/* Payment Method */}
-          <div className="mb-6">
-            <p className="text-sm font-medium text-slate-900 mb-3">Payment Method</p>
-            <div className="flex items-center gap-3">
-              {paymentMethod === "bank_transfer" ? (
-                <>
-                  <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-slate-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Bank Transfer</p>
-                    <p className="text-sm text-slate-500">Manual verification required</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-slate-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Midtrans</p>
-                    <p className="text-sm text-slate-500">Online payment</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <Separator className="my-4" />
-
-          {/* Amount */}
-          <div className="flex items-center justify-between">
-            <span className="text-slate-600">Total Amount</span>
-            <span className="text-2xl font-bold">{formatCurrency(summary.subtotal)}</span>
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-slate-900">Total Payment</span>
+            <span className="text-2xl font-bold text-slate-900">
+              {formatCurrency(order.totalAmount)}
+            </span>
           </div>
         </div>
 
-        {/* Payment Instructions */}
-        {paymentMethod === "bank_transfer" ? (
-          <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 md:p-8 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Bank Transfer Instructions</h2>
-            <p className="text-sm text-slate-600 mb-6">
-              Please transfer the exact amount to one of the following accounts:
-            </p>
-
-            <div className="space-y-4">
-              {BANK_ACCOUNTS.map((account) => (
-                <div
-                  key={account.bank}
-                  className="bg-slate-50 rounded-xl p-4 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-semibold">{account.bank}</p>
-                    <p className="text-sm text-slate-600">{account.accountNumber}</p>
-                    <p className="text-xs text-slate-500">{account.accountName}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopyAccount(account.accountNumber)}
-                    className="shrink-0"
-                  >
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copy
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 p-4 bg-amber-50 rounded-xl">
-              <p className="text-sm text-amber-800">
-                <strong>Important:</strong> Please include your Order ID ({orderId}) in the
-                transfer description. Your order will be processed after payment
-                verification.
+        {/* Shipping Info */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 md:p-8 mb-6">
+          <h2 className="text-base font-semibold text-slate-900 mb-3">
+            Shipping Address
+          </h2>
+          <div className="text-sm text-slate-600 space-y-0.5">
+            <p>{order.shippingAddress}</p>
+            {order.shippingCity && (
+              <p>
+                {order.shippingCity}
+                {order.shippingProvince ? `, ${order.shippingProvince}` : ""}
               </p>
-            </div>
+            )}
+            {order.shippingPostalCode && <p>{order.shippingPostalCode}</p>}
           </div>
-        ) : (
-          <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 md:p-8 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Online Payment</h2>
-            <p className="text-sm text-slate-600 mb-6">
-              You will be redirected to Midtrans to complete your payment securely.
-            </p>
+        </div>
 
-            <div className="p-4 bg-blue-50 rounded-xl mb-6">
-              <p className="text-sm text-blue-800">
-                Supported payment methods: Credit/Debit Card, GoPay, OVO, DANA,
-                QRIS, Virtual Account (BCA, BNI, Mandiri, Permata)
+        {/* Payment Section — only shown while PENDING */}
+        {isPending && (
+          <>
+            {/* iPaymu Online Payment */}
+            {order.ipaymuPaymentUrl && (
+              <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 md:p-8 mb-6">
+                <h2 className="text-lg font-semibold mb-2">
+                  Pay Online via iPaymu
+                </h2>
+                <p className="text-sm text-slate-600 mb-4">
+                  Powered by iPaymu — supports credit/debit cards, e-wallets
+                  (GoPay, OVO, DANA), QRIS, and Virtual Accounts (BCA, BNI,
+                  Mandiri, BRI, Permata).
+                </p>
+
+                <a href={order.ipaymuPaymentUrl} className="block">
+                  <Button className="w-full bg-black text-white hover:bg-slate-700 rounded-full h-12 text-base font-medium flex items-center gap-2">
+                    <ExternalLink className="h-4 w-4" />
+                    Pay {formatCurrency(order.totalAmount)} with iPaymu
+                  </Button>
+                </a>
+
+                <p className="text-xs text-slate-400 text-center mt-3">
+                  You will be redirected to the iPaymu secure payment page.
+                </p>
+              </div>
+            )}
+
+            {/* Manual Bank Transfer */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 md:p-8 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-lg font-semibold">
+                  Or Pay via Bank Transfer
+                </h2>
+                <Badge
+                  variant="outline"
+                  className="text-xs text-slate-500 border-slate-200"
+                >
+                  Manual
+                </Badge>
+              </div>
+              <p className="text-sm text-slate-600 mb-6">
+                Transfer the exact amount to one of the accounts below. After
+                payment, keep your receipt for verification.
               </p>
-            </div>
 
-            <Button
-              className="w-full bg-black text-white hover:bg-slate-800 rounded-full h-12"
-              onClick={() => {
-                // TODO: Integrate with Midtrans
-                alert("Midtrans integration pending");
-              }}
-            >
-              Pay with Midtrans
-            </Button>
+              <div className="space-y-3">
+                {BANK_ACCOUNTS.map((account) => (
+                  <div
+                    key={account.bank}
+                    className="bg-slate-50 rounded-xl p-4 flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {account.bank}
+                      </p>
+                      <p className="text-sm text-slate-700 font-mono">
+                        {account.accountNumber}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        a.n. {account.accountName}
+                      </p>
+                    </div>
+                    <CopyButton value={account.accountNumber} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                <p className="text-sm text-amber-800">
+                  <strong>Important:</strong> Include your Order ID{" "}
+                  <span className="font-mono font-bold">{order.id}</span> in the
+                  transfer description / berita. Your order will be processed
+                  after manual payment verification (1×24 hours).
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Paid / No payment required message */}
+        {!isPending && order.status === "PAID" && (
+          <div className="bg-green-50 border border-green-100 rounded-2xl p-6 mb-6 flex items-center gap-3">
+            <CircleCheck className="h-6 w-6 text-green-600 shrink-0" />
+            <p className="text-sm text-green-800">
+              <strong>Payment confirmed!</strong> Your order is now being
+              processed and will be shipped soon.
+            </p>
           </div>
         )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 rounded-full h-12"
-            onClick={handleComplete}
-          >
-            Continue Shopping
-          </Button>
           <Link href="/products" className="flex-1">
+            <Button
+              variant="outline"
+              className="w-full rounded-full h-12 border-slate-300"
+            >
+              Continue Shopping
+            </Button>
+          </Link>
+          <Link href="/" className="flex-1">
             <Button className="w-full bg-black text-white hover:bg-slate-800 rounded-full h-12">
-              Back to Shop
+              Back to Home
             </Button>
           </Link>
         </div>

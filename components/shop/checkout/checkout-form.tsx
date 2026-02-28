@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch, Controller } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ import {
   FieldSet,
   FieldLegend,
 } from "@/components/ui/field";
-import { PaymentMethodCard } from "./payment-method-card";
 import { CheckoutLocationForm } from "./checkout-location-form";
 import { useCheckoutStore } from "@/lib/stores/checkout-store";
 import { useCartStore } from "@/lib/stores/cart-store";
@@ -43,7 +42,6 @@ const checkoutSchema = z
     phone: z.string().min(10, "Phone number must be at least 10 digits"),
     address: z.string().min(10, "Full address is required"),
     location: locationSchema.optional(),
-    paymentMethod: z.enum(["bank_transfer", "ipaymu"]),
   })
   .superRefine((data, ctx) => {
     if (!data.location) {
@@ -64,8 +62,7 @@ interface CheckoutFormProps {
 export function CheckoutForm({ provinces }: CheckoutFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setCustomerInfo, setPaymentMethod, shippingCost } =
-    useCheckoutStore();
+  const { shippingCost } = useCheckoutStore();
   const { getSummary } = useCartStore();
   const summary = getSummary();
   const total = summary.subtotal + (shippingCost ?? 0);
@@ -73,18 +70,12 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
   const {
     register,
     handleSubmit,
-    setValue,
     trigger,
     control,
     formState: { errors },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      paymentMethod: "bank_transfer",
-    },
   });
-
-  const selectedPayment = useWatch({ control, name: "paymentMethod" });
 
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
@@ -104,55 +95,48 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
         postalCode: loc.postalCode || "",
       };
 
-      setCustomerInfo(customerInfo);
-      setPaymentMethod(data.paymentMethod);
+      const origin = window.location.origin;
+      const payload = {
+        customerName: customerInfo.name,
+        customerEmail: customerInfo.email,
+        customerPhone: customerInfo.phone,
+        shippingAddress: `${customerInfo.address}, ${customerInfo.subdistrict}, ${customerInfo.district}`,
+        shippingCity: customerInfo.city,
+        shippingProvince: customerInfo.province,
+        shippingPostalCode: customerInfo.postalCode,
+        shippingCost: shippingCost ?? 0,
+        items: useCartStore.getState().items.map((item) => ({
+          productId: item.productId,
+          sizeId: item.sizeId || undefined,
+          sizeName: item.sizeName || undefined,
+          quantity: item.quantity,
+        })),
+        returnUrl: `${origin}/checkout/confirmation`,
+        cancelUrl: `${origin}/checkout`,
+        notifyUrl: `${origin}/api/webhooks/ipaymu`,
+      };
 
-      if (data.paymentMethod === "ipaymu") {
-        const payload = {
-          customerName: customerInfo.name,
-          customerEmail: customerInfo.email,
-          customerPhone: customerInfo.phone,
-          shippingAddress: `${customerInfo.address}, ${customerInfo.subdistrict}, ${customerInfo.district}`,
-          shippingCity: customerInfo.city,
-          shippingProvince: customerInfo.province,
-          shippingPostalCode: customerInfo.postalCode,
-          shippingCost: shippingCost ?? 0,
-          items: useCartStore.getState().items.map((item) => ({
-            productId: item.productId,
-            sizeId: item.sizeId || undefined,
-            sizeName: item.sizeName || undefined,
-            quantity: item.quantity,
-          })),
-          returnUrl: `${window.location.origin}/checkout/confirmation`,
-          cancelUrl: `${window.location.origin}/checkout`,
-          notifyUrl: `${window.location.origin}/api/webhooks/ipaymu`,
-        };
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-        const res = await fetch("/api/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null);
-          console.error("Checkout failed:", errorData);
-          alert("Failed to create order. Please try again.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        const responseData = await res.json();
-
-        // Redirect to iPaymu Payment Page
-        useCartStore.getState().clearCart(); // optional: clear cart
-        router.push(responseData.paymentUrl);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        console.error("Checkout failed:", errorData);
+        alert("Failed to create order. Please try again.");
+        setIsSubmitting(false);
         return;
       }
 
-      // Bank Transfer fallback processing (mock)
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      router.push("/checkout/confirmation");
+      const { orderId } = await res.json();
+
+      // Clear cart now that order is safely stored in DB
+      useCartStore.getState().clearCart();
+
+      // Redirect to confirmation page — iPaymu button lives there
+      router.push(`/checkout/confirmation?orderId=${orderId}`);
     } catch (err) {
       console.error("Order submit Error:", err);
       alert("An unexpected error occurred.");
@@ -260,30 +244,6 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
           )}
         </FieldSet>
 
-        <Separator />
-
-        {/* Payment Method */}
-        <FieldSet>
-          <FieldLegend>Payment Method</FieldLegend>
-
-          <div className="space-y-3">
-            <PaymentMethodCard
-              method="bank_transfer"
-              selected={selectedPayment === "bank_transfer"}
-              onSelect={() => setValue("paymentMethod", "bank_transfer")}
-            />
-            <PaymentMethodCard
-              method="ipaymu"
-              selected={selectedPayment === "ipaymu"}
-              onSelect={() => setValue("paymentMethod", "ipaymu")}
-            />
-          </div>
-
-          {errors.paymentMethod && (
-            <FieldError errors={[{ message: errors.paymentMethod.message }]} />
-          )}
-        </FieldSet>
-
         {/* Submit Button */}
         <Button
           type="submit"
@@ -293,7 +253,7 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
         >
           {isSubmitting
             ? "Processing..."
-            : `Complete Order - ${formatCurrency(total)}`}
+            : `Place Order - ${formatCurrency(total)}`}
         </Button>
       </FieldGroup>
     </form>

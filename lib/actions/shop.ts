@@ -450,6 +450,17 @@ export async function getCategoriesWithCounts(): Promise<CategoryNode[]> {
   return getCachedCategories();
 }
 
+/**
+ * Get a single category by its slug, including children.
+ * Uses the cached category map for efficient lookups.
+ */
+export async function getCategoryBySlug(
+  slug: string,
+): Promise<CategoryNode | null> {
+  const categoryMap = await getCategoryMap();
+  return categoryMap.get(slug) || null;
+}
+
 // ============================================
 // PRODUCT DETAIL - Cached per-request
 // ============================================

@@ -12,13 +12,27 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useCartHydration } from "@/components/shop/cart/cart-hydration-wrapper";
 
-const navLinks = [
-  { label: "Shop", href: "/products" },
-  { label: "Collection", href: "/collection" },
-];
+interface NavCategory {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface HeaderProps {
+  categories?: NavCategory[];
+}
 
 /**
  * Cart button with SSR-safe rendering.
@@ -43,7 +57,7 @@ function CartButton() {
         <span
           className={cn(
             "absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center transition-opacity duration-200",
-            isHydrated ? "opacity-100" : "opacity-0"
+            isHydrated ? "opacity-100" : "opacity-0",
           )}
           aria-hidden={!isHydrated}
         >
@@ -54,7 +68,7 @@ function CartButton() {
   );
 }
 
-export function Header() {
+export function Header({ categories = [] }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
@@ -78,16 +92,33 @@ export function Header() {
                 </SheetHeader>
                 <div className="flex flex-col gap-6 mt-8 px-4">
                   <nav className="flex flex-col gap-4">
-                    {navLinks.map((link) => (
-                      <SheetClose asChild key={link.href}>
-                        <Link
-                          href={link.href}
-                          className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {link.label}
-                        </Link>
-                      </SheetClose>
-                    ))}
+                    <SheetClose asChild>
+                      <Link
+                        href="/products"
+                        className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Shop
+                      </Link>
+                    </SheetClose>
+
+                    {/* Categories section in mobile */}
+                    {categories.length > 0 && (
+                      <>
+                        <span className="text-xs uppercase tracking-widest text-muted-foreground/60 font-semibold mt-2">
+                          Categories
+                        </span>
+                        {categories.map((cat) => (
+                          <SheetClose asChild key={cat.id}>
+                            <Link
+                              href={`/categories/${cat.slug}`}
+                              className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors pl-2"
+                            >
+                              {cat.name}
+                            </Link>
+                          </SheetClose>
+                        ))}
+                      </>
+                    )}
                   </nav>
                 </div>
               </SheetContent>
@@ -102,17 +133,44 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          <NavigationMenu className="hidden lg:flex">
+            <NavigationMenuList>
+              {/* Shop Link */}
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  asChild
+                  className={navigationMenuTriggerStyle() + " bg-transparent"}
+                >
+                  <Link href="/products">Shop</Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              {/* Categories Dropdown */}
+              {categories.length > 0 && (
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="bg-transparent">
+                    Categories
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[200px] gap-1 p-2">
+                      {categories.map((cat) => (
+                        <li key={cat.id}>
+                          <NavigationMenuLink asChild>
+                            <Link
+                              href={`/categories/${cat.slug}`}
+                              className="block select-none rounded-md px-3 py-2 text-sm leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                            >
+                              {cat.name}
+                            </Link>
+                          </NavigationMenuLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              )}
+            </NavigationMenuList>
+          </NavigationMenu>
 
           {/* Actions */}
           <div className="flex items-center gap-2">

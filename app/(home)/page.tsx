@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { HeroCarousel } from "@/components/public/hero-carousel";
 import { FeaturedProductsCarousel } from "@/components/public/featured-products-carousel";
 import { CollectionsSection } from "@/components/public/collections-section";

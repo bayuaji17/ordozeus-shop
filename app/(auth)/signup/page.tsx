@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { signUp } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,6 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [isFirstAdmin, setIsFirstAdmin] = useState(false);
@@ -40,7 +40,7 @@ export default function SignUpPage() {
           setIsFirstAdmin(true);
         }
       } catch {
-        setError("Failed to check admin status");
+        toast.error("Failed to check admin status");
       } finally {
         setIsCheckingAdmin(false);
       }
@@ -51,15 +51,14 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      toast.error("Password must be at least 8 characters");
       return;
     }
 
@@ -83,7 +82,7 @@ export default function SignUpPage() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Failed to create account");
+        toast.error(result.error.message || "Failed to create account");
         return;
       }
 
@@ -96,10 +95,11 @@ export default function SignUpPage() {
         });
       }
 
+      toast.success("Account created successfully!");
       router.push("/admin");
       router.refresh();
     } catch {
-      setError("An unexpected error occurred");
+      toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -134,11 +134,6 @@ export default function SignUpPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-                {error}
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -190,7 +185,7 @@ export default function SignUpPage() {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col space-y-4 mt-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating account..." : "Create Account"}
             </Button>

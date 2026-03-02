@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,6 @@ export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
@@ -34,7 +34,7 @@ export default function SignInPage() {
           router.push("/signup");
         }
       } catch {
-        setError("Failed to check admin status");
+        toast.error("Failed to check admin status");
       } finally {
         setIsCheckingAdmin(false);
       }
@@ -45,7 +45,6 @@ export default function SignInPage() {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
@@ -55,14 +54,15 @@ export default function SignInPage() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Failed to sign in");
+        toast.error(result.error.message || "Failed to sign in");
         setIsLoading(false);
         return;
       }
 
+      toast.success("Signed in successfully!");
       window.location.href = "/admin";
     } catch {
-      setError("An unexpected error occurred");
+      toast.error("An unexpected error occurred");
       setIsLoading(false);
     }
   };
@@ -90,11 +90,6 @@ export default function SignInPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-                {error}
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

@@ -12,10 +12,9 @@ import { formatCurrency } from "@/lib/currency";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { showCartToast } from "@/lib/utils/toast";
 import type { ShopProduct } from "@/lib/types/shop";
-import type { CollectionProduct } from "@/lib/types/collections";
 
 interface ProductCardShopProps {
-  product: ShopProduct | CollectionProduct;
+  product: ShopProduct;
 }
 
 export function ProductCardShop({ product }: ProductCardShopProps) {

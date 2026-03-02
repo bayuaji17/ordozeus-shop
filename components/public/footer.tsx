@@ -1,32 +1,31 @@
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Instagram, 
-  Twitter, 
+import {
+  Instagram,
+  Twitter,
   Facebook,
   Mail,
   MapPin,
-  Phone
+  Phone,
 } from "lucide-react";
 
 const footerLinks = {
   shop: [
     { label: "All Products", href: "/products" },
     { label: "New Arrivals", href: "/products?sort=newest" },
-    { label: "Featured", href: "/products?featured=true" },
-    { label: "Collections", href: "/collections" },
+    { label: "Collections", href: "/products?categories=collection" },
   ],
   support: [
-    { label: "Contact Us", href: "/contact" },
-    { label: "FAQs", href: "/faqs" },
-    { label: "Shipping", href: "/shipping" },
-    { label: "Returns", href: "/returns" },
+    { label: "Contact Us", href: "#" },
+    { label: "FAQs", href: "#" },
+    { label: "Shipping", href: "#" },
+    { label: "Returns", href: "#" },
   ],
   company: [
-    { label: "About Us", href: "/about" },
-    { label: "Careers", href: "/careers" },
-    { label: "Press", href: "/press" },
-    { label: "Sustainability", href: "/sustainability" },
+    { label: "About Us", href: "#" },
+    { label: "Careers", href: "#" },
+    { label: "Press", href: "#" },
+    { label: "Sustainability", href: "#" },
   ],
 };
 
@@ -52,22 +51,23 @@ export function Footer() {
                   </span>
                 </Link>
                 <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
-                  Curated fashion for the modern individual. Quality craftsmanship meets contemporary design.
+                  Curated fashion for the modern individual. Quality
+                  craftsmanship meets contemporary design.
                 </p>
               </div>
 
               {/* Contact Info */}
               <div className="space-y-3 pt-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4 flex-shrink-0" />
+                  <MapPin className="h-4 w-4 shrink-0" />
                   <span>123 Fashion Avenue, Design District</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4 flex-shrink-0" />
+                  <Phone className="h-4 w-4 shrink-0" />
                   <span>+1 (555) 123-4567</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  <Mail className="h-4 w-4 shrink-0" />
                   <span>hello@ordozeus.com</span>
                 </div>
               </div>
@@ -97,7 +97,7 @@ export function Footer() {
                   </h4>
                   <ul className="space-y-3">
                     {footerLinks.shop.map((link) => (
-                      <li key={link.href}>
+                      <li key={link.label}>
                         <Link
                           href={link.href}
                           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -116,10 +116,11 @@ export function Footer() {
                   </h4>
                   <ul className="space-y-3">
                     {footerLinks.support.map((link) => (
-                      <li key={link.href}>
+                      <li key={link.label}>
                         <Link
                           href={link.href}
                           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          prefetch={false}
                         >
                           {link.label}
                         </Link>
@@ -135,10 +136,11 @@ export function Footer() {
                   </h4>
                   <ul className="space-y-3">
                     {footerLinks.company.map((link) => (
-                      <li key={link.href}>
+                      <li key={link.label}>
                         <Link
                           href={link.href}
                           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          prefetch={false}
                         >
                           {link.label}
                         </Link>
@@ -160,13 +162,13 @@ export function Footer() {
           </p>
           <div className="flex gap-6">
             <Link
-              href="/privacy"
+              href="#"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Privacy Policy
             </Link>
             <Link
-              href="/terms"
+              href="#"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Terms of Service

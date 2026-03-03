@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     let body: Record<string, unknown>;
 
     if (isFormUrlEncoded) {
-        // iPaymu might send form url encoded depending on dashboard settings
+        // iPaymu sends form url encoded by default
         const formData = await req.formData();
         body = Object.fromEntries(formData.entries());
     } else {
@@ -18,9 +18,14 @@ export async function POST(req: Request) {
     }
 
     // 1. Verify Signature
-    const isValid = verifyCallbackSignature(body);
+    // iPaymu sends signature in `X-Signature` header (not in the body)
+    const headerSignature = req.headers.get("x-signature");
+    const bodySignature = typeof body.signature === "string" ? body.signature : null;
+    const signature = headerSignature || bodySignature;
+
+    const isValid = verifyCallbackSignature(body, signature);
     if (!isValid) {
-      console.warn("iPaymu Webhook: Invalid Signature", body);
+      console.warn("iPaymu Webhook: Invalid Signature", { signature, body });
       return new NextResponse("Invalid Signature", { status: 400 });
     }
 

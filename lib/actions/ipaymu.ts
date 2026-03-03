@@ -96,24 +96,28 @@ export async function createPaymentSession(
 
 /**
  * Verifies the iPaymu incoming webhook callback signature.
- * Uses the precise method derived from iPaymu v2 documentation:
- * 1. Extract and separate the `signature` from the body.
+ * iPaymu v2 sends the signature in the `X-Signature` header.
+ *
+ * Steps per iPaymu docs:
+ * 1. Remove `signature` from body (if present).
  * 2. Sort the remaining keys lexicographically.
  * 3. Stringify to JSON.
  * 4. HMAC-SHA256 against the Merchant VA as the secret.
  * 5. Compare signatures.
  *
- * @param reqBody The JSON parsed body of the incoming request
- * @throws Error if the signature is invalid
+ * @param reqBody The parsed body of the incoming request
+ * @param signature The signature to verify against (from X-Signature header or body)
  */
-export function verifyCallbackSignature(reqBody: Record<string, unknown>): boolean {
+export function verifyCallbackSignature(
+  reqBody: Record<string, unknown>,
+  signature: string | null
+): boolean {
   if (!reqBody || typeof reqBody !== "object") return false;
+  if (!signature) return false;
 
   const data = { ...reqBody };
-  const receivedSignature = data.signature;
 
-  if (!receivedSignature || typeof receivedSignature !== "string") return false;
-
+  // Remove signature from body if it exists there too
   delete data.signature;
 
   // Sort keys alphabetically
@@ -132,5 +136,5 @@ export function verifyCallbackSignature(reqBody: Record<string, unknown>): boole
     .update(jsonBody)
     .digest("hex");
 
-  return calculatedSignature === receivedSignature;
+  return calculatedSignature === signature;
 }

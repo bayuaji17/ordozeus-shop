@@ -22,14 +22,16 @@ export async function POST(req: Request) {
       data = (await req.json()) as Record<string, unknown>;
     }
 
-    // 2. Extract and remove signature from body (per iPaymu Express example)
-    const receivedSignature = data.signature;
-    delete data.signature;
+    // 2. Get signature from X-Signature header (iPaymu v2 sends it here, NOT in body)
+    const receivedSignature = req.headers.get("x-signature");
 
-    if (!receivedSignature || typeof receivedSignature !== "string") {
-      console.warn("iPaymu Webhook: No signature in body", data);
+    if (!receivedSignature) {
+      console.warn("iPaymu Webhook: No X-Signature header");
       return new NextResponse("Missing Signature", { status: 400 });
     }
+
+    // Remove signature from body if it exists (safety)
+    delete data.signature;
 
     // 3. Sort keys alphabetically (ksort equivalent)
     const sortedKeys = Object.keys(data).sort();

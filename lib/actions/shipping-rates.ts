@@ -48,8 +48,6 @@ export async function getShippingRates(
     search?: string;
   } = {}
 ): Promise<PaginatedRates> {
-  await requireAdmin();
-
   const { courierId, page = 1, search } = options;
   const offset = (page - 1) * ITEMS_PER_PAGE;
 

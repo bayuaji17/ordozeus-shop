@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,16 @@ export function CourierFormDialog({
   const [isActive, setIsActive] = useState(courier?.isActive ?? true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Sync form state when dialog opens with new courier data
+  useEffect(() => {
+    if (open) {
+      setName(courier?.name || "");
+      setCode(courier?.code || "");
+      setIsActive(courier?.isActive ?? true);
+      setErrors({});
+    }
+  }, [open, courier]);
 
   const resetForm = () => {
     setName("");

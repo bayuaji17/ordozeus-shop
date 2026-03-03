@@ -165,7 +165,7 @@ export function AddRateDialog({
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] lg:max-w-[800px]">
-        <ScrollArea className="h-[500px]">
+        <ScrollArea className="h-[500px] pr-4">
           <DialogHeader>
             <DialogTitle>
               {isEditing ? "Edit Shipping Rate" : "Add Shipping Rate"}
@@ -177,10 +177,10 @@ export function AddRateDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <FieldGroup className="py-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+            <FieldGroup className="w-full py-4">
               {/* Courier */}
-              <Field>
+              <Field className="w-full">
                 <FieldLabel>Courier</FieldLabel>
                 <FieldDescription>Select the shipping courier</FieldDescription>
                 <FieldContent>
@@ -193,7 +193,7 @@ export function AddRateDialog({
                         onValueChange={field.onChange}
                         disabled={isEditing}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select courier..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -225,7 +225,7 @@ export function AddRateDialog({
                         onValueChange={handleProvinceChange}
                         disabled={isEditing}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select province..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -257,7 +257,7 @@ export function AddRateDialog({
                           !selectedProvince || isLoadingCities || isEditing
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue
                             placeholder={
                               isLoadingCities

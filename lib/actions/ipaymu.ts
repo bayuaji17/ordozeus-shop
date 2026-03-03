@@ -2,8 +2,7 @@ import crypto from "crypto";
 
 const VA_IPAYMU = process.env.VA_IPAYMU || "";
 const API_KEY_IPAYMU = process.env.API_KEY_IPAYMU || "";
-const BASE_URL_IPAYMU =
-  process.env.BASE_URL_IPAYMU || "https://sandbox.ipaymu.com/";
+const BASE_URL_IPAYMU = process.env.BASE_URL_IPAYMU!;
 
 export interface IpaymuPaymentParams {
   product: string[]; // required
@@ -30,6 +29,22 @@ export interface IpaymuPaymentResponse {
 }
 
 /**
+ * Generate iPaymu timestamp in YYYYMMDDhhmmss format.
+ */
+function getIpaymuTimestamp(): string {
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return (
+    now.getFullYear().toString() +
+    pad(now.getMonth() + 1) +
+    pad(now.getDate()) +
+    pad(now.getHours()) +
+    pad(now.getMinutes()) +
+    pad(now.getSeconds())
+  );
+}
+
+/**
  * Creates a payment session in iPaymu.
  *
  * @param params Details of the checkout.
@@ -39,11 +54,14 @@ export async function createPaymentSession(
   params: IpaymuPaymentParams
 ): Promise<IpaymuPaymentResponse> {
   const bodyString = JSON.stringify(params);
+  const timestamp = getIpaymuTimestamp();
 
   // 1. Generate Signature
-  // Formula: HMAC-SHA256(POST:va:hexStringToSign:apikey)
+  // Formula per iPaymu API v2 docs:
+  //   StringToSign = POST:VA:SHA256(body):Timestamp
+  //   Signature    = HMAC-SHA256(StringToSign, ApiKey)
   const hexBody = crypto.createHash("sha256").update(bodyString).digest("hex");
-  const stringToSign = `POST:${VA_IPAYMU}:${hexBody}:${API_KEY_IPAYMU}`;
+  const stringToSign = `POST:${VA_IPAYMU}:${hexBody}:${timestamp}`;
   const signature = crypto
     .createHmac("sha256", API_KEY_IPAYMU)
     .update(stringToSign)
@@ -56,7 +74,7 @@ export async function createPaymentSession(
       "Content-Type": "application/json",
       signature: signature,
       va: VA_IPAYMU,
-      timestamp: new Date().toISOString().replace("T", " ").substring(0, 19), 
+      timestamp: timestamp,
     },
     body: bodyString,
   });

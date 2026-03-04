@@ -17,9 +17,9 @@ const PAYMENT_METHODS = {
     description: "BCA, BNI, Mandiri",
     note: "Manual verification",
   },
-  ipaymu: {
+  xendit: {
     icon: CreditCard,
-    title: "iPaymu",
+    title: "Xendit",
     description: "Credit/Debit Card, E-wallet, QRIS, VA",
     note: "Online payment",
   },

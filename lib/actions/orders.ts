@@ -31,7 +31,7 @@ export interface OrderConfirmation {
   shippingCity: string | null;
   shippingProvince: string | null;
   shippingPostalCode: string | null;
-  ipaymuPaymentUrl: string | null;
+  xenditInvoiceUrl: string | null;
   createdAt: Date;
   items: OrderConfirmationItem[];
 }
@@ -70,7 +70,7 @@ export async function getOrderForConfirmation(
     shippingCity: order.shippingCity ?? null,
     shippingProvince: order.shippingProvince ?? null,
     shippingPostalCode: order.shippingPostalCode ?? null,
-    ipaymuPaymentUrl: order.ipaymuPaymentUrl ?? null,
+    xenditInvoiceUrl: order.xenditInvoiceUrl ?? null,
     createdAt: order.createdAt,
     items,
   };

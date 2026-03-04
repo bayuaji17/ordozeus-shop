@@ -113,7 +113,7 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
         })),
         returnUrl: `${origin}/checkout/confirmation`,
         cancelUrl: `${origin}/checkout`,
-        notifyUrl: `${origin}/api/webhooks/ipaymu`,
+        notifyUrl: `${origin}/api/webhooks/xendit`,
       };
 
       const res = await fetch("/api/checkout", {
@@ -135,7 +135,7 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
       // Clear cart now that order is safely stored in DB
       useCartStore.getState().clearCart();
 
-      // Redirect to confirmation page — iPaymu button lives there
+      // Redirect to confirmation page — Xendit payment button lives there
       router.push(`/checkout/confirmation?orderId=${orderId}`);
     } catch (err) {
       console.error("Order submit Error:", err);

@@ -219,27 +219,26 @@ export default async function ConfirmationPage({ searchParams }: PageProps) {
         {/* Payment Section — only shown while PENDING */}
         {isPending && (
           <>
-            {/* iPaymu Online Payment */}
-            {order.ipaymuPaymentUrl && (
+            {/* Xendit Online Payment */}
+            {order.xenditInvoiceUrl && (
               <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 md:p-8 mb-6">
                 <h2 className="text-lg font-semibold mb-2">
-                  Pay Online via iPaymu
+                  Pay Online via Xendit
                 </h2>
                 <p className="text-sm text-slate-600 mb-4">
-                  Powered by iPaymu — supports credit/debit cards, e-wallets
-                  (GoPay, OVO, DANA), QRIS, and Virtual Accounts (BCA, BNI,
-                  Mandiri, BRI, Permata).
+                  Powered by Xendit — supports credit/debit cards, e-wallets
+                  (GoPay, OVO, DANA, ShopeePay), QRIS, and Virtual Accounts.
                 </p>
 
-                <a href={order.ipaymuPaymentUrl} className="block">
+                <a href={order.xenditInvoiceUrl} className="block">
                   <Button className="w-full bg-black text-white hover:bg-slate-700 rounded-full h-12 text-base font-medium flex items-center gap-2">
                     <ExternalLink className="h-4 w-4" />
-                    Pay {formatCurrency(order.totalAmount)} with iPaymu
+                    Pay {formatCurrency(order.totalAmount)} with Xendit
                   </Button>
                 </a>
 
                 <p className="text-xs text-slate-400 text-center mt-3">
-                  You will be redirected to the iPaymu secure payment page.
+                  You will be redirected to the Xendit secure payment page.
                 </p>
               </div>
             )}

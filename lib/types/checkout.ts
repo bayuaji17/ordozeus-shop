@@ -11,7 +11,7 @@ export interface CustomerInfo {
   destinationId?: number; // Shipping destination ID for shipping calculations
 }
 
-export type PaymentMethod = "bank_transfer" | "ipaymu";
+export type PaymentMethod = "bank_transfer" | "xendit";
 
 export interface CheckoutData {
   customerInfo: CustomerInfo;

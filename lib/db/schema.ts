@@ -346,10 +346,10 @@ export const orders = pgTable("orders", {
   status: orderStatusEnum("status").default("PENDING").notNull(),
   totalAmount: integer("total_amount").notNull(), // IDR cents
 
-  // iPaymu Tracking
-  ipaymuSessionId: varchar("ipaymu_session_id", { length: 255 }),
-  ipaymuTrxId: varchar("ipaymu_trx_id", { length: 255 }),
-  ipaymuPaymentUrl: text("ipaymu_payment_url"),
+  // Xendit Tracking
+  xenditInvoiceId: varchar("xendit_invoice_id", { length: 255 }),
+  xenditExternalId: varchar("xendit_external_id", { length: 255 }),
+  xenditInvoiceUrl: text("xendit_invoice_url"),
 
   // Snapshot of Customer Info
   customerName: varchar("customer_name", { length: 255 }).notNull(),

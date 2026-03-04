@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { orders, orderItems, products, productSizes } from "@/lib/db/schema";
-import { createPaymentSession } from "@/lib/actions/ipaymu";
+import { createXenditInvoice } from "@/lib/actions/xendit";
 import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const productsMap = new Map<string, typeof dbProducts[0]>();
     dbProducts.forEach((p) => productsMap.set(p.id, p));
 
-    // Optional: Fetch size names if applicable 
+    // Optional: Fetch size info if applicable 
     const sizeIds = payload.items.map(i => i.sizeId).filter(Boolean) as string[];
     const sizeMap = new Map<string, { sku: string | null; id: string }>();
     if (sizeIds.length > 0) {
@@ -84,11 +84,9 @@ export async function POST(req: Request) {
       price: number;
       quantity: number;
     }[] = [];
-    
-    // Arrays for iPaymu
-    const ipaymuProductNames: string[] = [];
-    const ipaymuQtys: string[] = [];
-    const ipaymuPrices: string[] = [];
+
+    // Build description lines for the Xendit invoice
+    const descriptionLines: string[] = [];
 
     // Generate logical Order ID
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -124,37 +122,25 @@ export async function POST(req: Request) {
         quantity: item.quantity,
       });
 
-      ipaymuProductNames.push(formalProductName);
-      ipaymuQtys.push(item.quantity.toString());
-      // iPaymu expects true integer strings generally, or decimals based on currency setup. Ordozeus apparently stores as cents but let's assume base price is the intended amount.  
-      // *Wait, database schema says `// IDR cents`. We must convert.*
-      // Let's assume database is IDR units (there are no IDR cents usually). Usually gateways expect normal IDR values.
-      ipaymuPrices.push(price.toString()); // If it's cents, it should be (price/100). Assuming standard IDR here.
+      descriptionLines.push(`${item.quantity}x ${formalProductName}`);
     }
 
     // Add shipping cost to the order total
     const shippingCostValue = payload.shippingCost ?? 0;
     totalAmount += shippingCostValue;
 
-    // iPaymu calculates the charged amount itself from sum(price[i] × qty[i]).
-    // The `amount` field is ignored by iPaymu. So shipping MUST be added as
-    // a separate line item here — otherwise iPaymu only charges product prices.
     if (shippingCostValue > 0) {
       const shippingLabel = payload.courier
         ? `Shipping (${payload.courier})`
         : "Shipping";
-      ipaymuProductNames.push(shippingLabel);
-      ipaymuQtys.push("1");
-      ipaymuPrices.push(shippingCostValue.toString());
+      descriptionLines.push(shippingLabel);
     }
 
-    // 1. Create order
-    // 2. Create order items
-    // 3. Obtain iPaymu URL
-    // 4. Update order with iPaymu Session ID
-    
-    // We can't rely strictly on transaction block spanning an external HTTP call due to timeouts.
-    // Insert pending order first.
+    // 1. Insert pending order
+    // 2. Insert order items
+    // 3. Create Xendit Invoice
+    // 4. Update order with Xendit Invoice ID + URL
+
     await db.insert(orders).values({
         id: orderId,
         status: "PENDING",
@@ -172,44 +158,40 @@ export async function POST(req: Request) {
 
     await db.insert(orderItems).values(orderItemsToInsert);
 
-    // Call iPaymu
-    let ipaymuSession: Awaited<ReturnType<typeof createPaymentSession>>;
+    // Create Xendit Invoice
     try {
-        ipaymuSession = await createPaymentSession({
-            product: ipaymuProductNames,
-            qty: ipaymuQtys,
-            price: ipaymuPrices,
-            amount: totalAmount.toString(),
-            returnUrl: `${payload.returnUrl}?orderId=${orderId}`,
-            cancelUrl: payload.cancelUrl,
-            notifyUrl: payload.notifyUrl,
-            referenceId: orderId,
-            buyerName: payload.customerName,
-            buyerEmail: payload.customerEmail,
-            buyerPhone: payload.customerPhone,
-        });
+      const xenditInvoice = await createXenditInvoice({
+        externalId: orderId,
+        amount: totalAmount,
+        description: descriptionLines.join(", "),
+        customerName: payload.customerName,
+        customerEmail: payload.customerEmail,
+        customerPhone: payload.customerPhone,
+        successRedirectUrl: `${payload.returnUrl}?orderId=${orderId}`,
+        failureRedirectUrl: payload.cancelUrl,
+      });
 
-        // Update the order with session info
-        await db.update(orders)
-            .set({ 
-                ipaymuSessionId: ipaymuSession.Data.SessionID,
-                ipaymuPaymentUrl: ipaymuSession.Data.Url,
-            })
-            .where(eq(orders.id, orderId));
+      // Update the order with Xendit invoice info
+      await db.update(orders)
+        .set({
+          xenditInvoiceId: xenditInvoice.invoiceId,
+          xenditExternalId: xenditInvoice.externalId,
+          xenditInvoiceUrl: xenditInvoice.invoiceUrl,
+        })
+        .where(eq(orders.id, orderId));
+
+      return NextResponse.json({
+        orderId,
+        paymentUrl: xenditInvoice.invoiceUrl,
+      });
 
     } catch (err: unknown) {
-        // Handle failure to generate session and cleanup or leave as failed
-        console.error("Failed to generate ipaymu session", err);
-        return NextResponse.json(
-            { message: "Failed to communicate with payment gateway" },
-            { status: 500 }
-        );
+      console.error("Failed to create Xendit invoice", err);
+      return NextResponse.json(
+        { message: "Failed to communicate with payment gateway" },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json({
-      orderId,
-      paymentUrl: ipaymuSession.Data.Url,
-    });
 
   } catch (err) {
     if (err instanceof Error) {

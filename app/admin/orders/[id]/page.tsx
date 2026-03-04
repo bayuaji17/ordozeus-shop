@@ -183,21 +183,21 @@ export default async function AdminOrderDetailsPage({
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Method</span>
-                <span className="font-medium">iPaymu</span>
+                <span className="font-medium">Xendit</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Trans. ID</span>
+                <span className="text-muted-foreground">Invoice ID</span>
                 <span
                   className="font-medium truncate max-w-[120px] ml-2"
-                  title={order.ipaymuTrxId || "N/A"}
+                  title={order.xenditInvoiceId || "N/A"}
                 >
-                  {order.ipaymuTrxId || "Pending"}
+                  {order.xenditInvoiceId || "Pending"}
                 </span>
               </div>
-              {order.ipaymuPaymentUrl && (
+              {order.xenditInvoiceUrl && (
                 <div className="mt-4 pt-4 border-t">
                   <Link
-                    href={order.ipaymuPaymentUrl}
+                    href={order.xenditInvoiceUrl}
                     target="_blank"
                     className="text-blue-600 hover:underline"
                   >

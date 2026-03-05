@@ -76,6 +76,81 @@ export async function getOrderForConfirmation(
   };
 }
 
+// ============================================================================
+// PUBLIC — Track Order (no admin auth required)
+// ============================================================================
+
+export interface TrackOrderItem {
+  id: string;
+  productName: string;
+  sizeName: string | null;
+  price: number;
+  quantity: number;
+}
+
+export interface TrackOrderResult {
+  id: string;
+  status: string;
+  totalAmount: number;
+  shippingCost: number;
+  courier: string | null;
+  trackingNumber: string | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  shippingAddress: string;
+  shippingCity: string | null;
+  shippingProvince: string | null;
+  shippingPostalCode: string | null;
+  createdAt: Date;
+  items: TrackOrderItem[];
+}
+
+export async function trackOrder(
+  orderId: string,
+): Promise<TrackOrderResult | null> {
+  if (!orderId?.trim()) return null;
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId.trim()),
+  });
+
+  if (!order) return null;
+
+  const items = await db
+    .select({
+      id: orderItems.id,
+      productName: orderItems.productName,
+      sizeName: orderItems.sizeName,
+      price: orderItems.price,
+      quantity: orderItems.quantity,
+    })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId.trim()));
+
+  return {
+    id: order.id,
+    status: order.status,
+    totalAmount: order.totalAmount,
+    shippingCost: order.shippingCost,
+    courier: order.courier ?? null,
+    trackingNumber: order.trackingNumber ?? null,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    customerPhone: order.customerPhone,
+    shippingAddress: order.shippingAddress,
+    shippingCity: order.shippingCity ?? null,
+    shippingProvince: order.shippingProvince ?? null,
+    shippingPostalCode: order.shippingPostalCode ?? null,
+    createdAt: order.createdAt,
+    items,
+  };
+}
+
+// ============================================================================
+// ADMIN — requires admin auth
+// ============================================================================
+
 export async function getOrders(page: number = 1, limit: number = 10) {
   await requireAdmin();
 

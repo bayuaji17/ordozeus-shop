@@ -1,0 +1,46 @@
+# =============================================================================
+# OrdoZeus Shop — Environment Variables
+# =============================================================================
+# Copy this file to .env.local and fill in your actual values:
+#   cp env-sample.txt .env.local
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Database — Supabase PostgreSQL
+# -----------------------------------------------------------------------------
+# Transaction pooler (pgbouncer) — used by the app at runtime
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true"
+# Direct connection — used by Drizzle Kit for migrations
+DIRECT_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres"
+
+# -----------------------------------------------------------------------------
+# Authentication — better-auth
+# -----------------------------------------------------------------------------
+# Generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET="your-secret-key-here"
+# Your app URL (no trailing slash)
+BETTER_AUTH_URL="http://localhost:3000"
+
+# -----------------------------------------------------------------------------
+# Cloudflare R2 — Object Storage (product images)
+# -----------------------------------------------------------------------------
+R2_ACCOUNT_ID="your-cloudflare-account-id"
+R2_ACCESS_KEY_ID="your-r2-access-key-id"
+R2_SECRET_ACCESS_KEY="your-r2-secret-access-key"
+R2_BUCKET_NAME="your-bucket-name"
+# Public URL for serving images (custom domain or R2 public URL)
+R2_PUBLIC_URL="https://your-storage-domain.example.com"
+
+# -----------------------------------------------------------------------------
+# Xendit — Payment Gateway
+# -----------------------------------------------------------------------------
+# Get from: https://dashboard.xendit.co/settings/developers#api-keys
+XENDIT_SECRET_KEY="xnd_development_..."
+XENDIT_PUBLIC_KEY="xnd_public_development_..."
+# Webhook verification token (set in Xendit dashboard → Webhooks)
+XENDIT_WEBHOOK_TOKEN="your-webhook-verification-token"
+
+# -----------------------------------------------------------------------------
+# SEO (optional)
+# -----------------------------------------------------------------------------
+# NEXT_PUBLIC_BASE_URL="https://your-domain.com"

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag, Menu } from "lucide-react";
+import { ShoppingBag, Menu, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,6 +101,16 @@ export function Header({ categories = [] }: HeaderProps) {
                       </Link>
                     </SheetClose>
 
+                    <SheetClose asChild>
+                      <Link
+                        href="/track-order"
+                        className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                      >
+                        <PackageSearch className="h-5 w-5" />
+                        Track Order
+                      </Link>
+                    </SheetClose>
+
                     {/* Categories section in mobile */}
                     {categories.length > 0 && (
                       <>
@@ -174,6 +184,16 @@ export function Header({ categories = [] }: HeaderProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            <Link href="/track-order" className="hidden lg:flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+              >
+                <PackageSearch className="h-4 w-4" />
+                <span className="text-sm">Track Order</span>
+              </Button>
+            </Link>
             <CartButton />
           </div>
         </div>

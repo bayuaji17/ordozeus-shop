@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "OrdoZeus | Premium Fashion & Lifestyle",
-  description: "Curated fashion for the modern individual. Quality craftsmanship meets contemporary design at OrdoZeus.",
+  description:
+    "Curated fashion for the modern individual. Quality craftsmanship meets contemporary design at OrdoZeus.",
 };
 
 export default function RootLayout({

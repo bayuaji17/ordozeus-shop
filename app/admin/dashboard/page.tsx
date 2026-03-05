@@ -5,15 +5,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Package, Layers, Grid3x3, AlertTriangle } from "lucide-react";
-import { getDashboardStats } from "@/lib/actions/dashboard";
+import { Package, AlertTriangle, ShoppingCart } from "lucide-react";
+import { getDashboardStats, getOrderChartData } from "@/lib/actions/dashboard";
+import { RevenueChart } from "@/components/admin/dashboard/revenue-chart";
+import { OrdersChart } from "@/components/admin/dashboard/orders-chart";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { requireAdmin } from "@/lib/auth/server";
 
 export default async function DashboardPage() {
   await requireAdmin();
-  const stats = await getDashboardStats();
+  const [stats, chartData] = await Promise.all([
+    getDashboardStats(),
+    getOrderChartData(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -23,7 +28,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -49,36 +54,6 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Categories</CardTitle>
-            <Layers className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.categories.total}</div>
-            <div className="mt-2 flex flex-wrap gap-1 text-xs text-muted-foreground">
-              {stats.categories.byLevel.map((item) => (
-                <span key={item.level}>
-                  {item.count} L{item.level}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Product Sizes</CardTitle>
-            <Grid3x3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.sizes.total}</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Total size combinations
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Low Stock Alerts
             </CardTitle>
@@ -99,47 +74,11 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Product Status Overview</CardTitle>
-            <CardDescription>
-              Distribution of products by status
-            </CardDescription>
+            <CardTitle>Revenue (30 Days)</CardTitle>
+            <CardDescription>Daily revenue from paid orders</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant="default">Active</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Products currently available
-                  </span>
-                </div>
-                <span className="text-2xl font-bold">
-                  {stats.products.active}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">Draft</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Products in preparation
-                  </span>
-                </div>
-                <span className="text-2xl font-bold">
-                  {stats.products.draft}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">Archived</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Products no longer active
-                  </span>
-                </div>
-                <span className="text-2xl font-bold">
-                  {stats.products.archived}
-                </span>
-              </div>
-            </div>
+            <RevenueChart data={chartData} />
           </CardContent>
         </Card>
 
@@ -191,6 +130,17 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* Orders Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Orders (30 Days)</CardTitle>
+          <CardDescription>Daily order count from paid orders</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrdersChart data={chartData} />
+        </CardContent>
+      </Card>
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
@@ -210,13 +160,13 @@ export default async function DashboardPage() {
               </span>
             </Link>
             <Link
-              href="/admin/categories"
+              href="/admin/orders"
               className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 hover:border-primary hover:bg-accent transition-colors"
             >
-              <Layers className="h-8 w-8 mb-2 text-muted-foreground" />
-              <span className="font-medium">Manage Categories</span>
+              <ShoppingCart className="h-8 w-8 mb-2 text-muted-foreground" />
+              <span className="font-medium">Manage Orders</span>
               <span className="text-xs text-muted-foreground mt-1">
-                {stats.categories.total} categories
+                View all orders
               </span>
             </Link>
             <Link

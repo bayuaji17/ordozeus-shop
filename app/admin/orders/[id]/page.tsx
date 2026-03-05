@@ -1,9 +1,11 @@
 import { getOrderById } from "@/lib/actions/orders";
+import { getCouriers } from "@/lib/actions/couriers";
 import { notFound } from "next/navigation";
 import {
   OrderStatusBadge,
   OrderStatus,
 } from "@/components/admin/orders/order-status-badge";
+import { OrderStatusTimeline } from "@/components/admin/orders/order-status-timeline";
 import { OrderStatusForm } from "@/components/admin/orders/order-status-form";
 import { formatCurrency } from "@/lib/currency";
 import Link from "next/link";
@@ -25,7 +27,10 @@ export default async function AdminOrderDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const resolvedParams = await params;
-  const order = await getOrderById(resolvedParams.id);
+  const [order, allCouriers] = await Promise.all([
+    getOrderById(resolvedParams.id),
+    getCouriers(),
+  ]);
 
   if (!order) {
     notFound();
@@ -52,6 +57,9 @@ export default async function AdminOrderDetailsPage({
           <OrderStatusBadge status={order.status as OrderStatus} />
         </div>
       </div>
+
+      {/* Status Timeline */}
+      <OrderStatusTimeline currentStatus={order.status as OrderStatus} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
@@ -127,6 +135,9 @@ export default async function AdminOrderDetailsPage({
               <OrderStatusForm
                 orderId={order.id}
                 currentStatus={order.status as OrderStatus}
+                trackingNumber={order.trackingNumber}
+                courier={order.courier}
+                couriers={allCouriers}
               />
             </CardContent>
           </Card>
@@ -161,11 +172,19 @@ export default async function AdminOrderDetailsPage({
                 {order.shippingPostalCode}
               </p>
               {order.trackingNumber && (
-                <div className="mt-4 pt-4 border-t">
+                <div className="mt-4 pt-4 border-t space-y-2">
+                  {order.courier && (
+                    <>
+                      <p className="font-semibold text-slate-900">Courier</p>
+                      <p className="text-muted-foreground">
+                        {order.courier.toUpperCase()}
+                      </p>
+                    </>
+                  )}
                   <p className="font-semibold text-slate-900">
                     Tracking Number
                   </p>
-                  <p className="text-muted-foreground mt-1">
+                  <p className="text-muted-foreground">
                     {order.trackingNumber}
                   </p>
                 </div>

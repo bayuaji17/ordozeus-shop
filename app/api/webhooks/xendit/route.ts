@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { orders } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { orders, orderItems, productSizes, inventoryMovements } from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { verifyXenditWebhookToken } from "@/lib/actions/xendit";
 
@@ -41,8 +41,66 @@ export async function POST(req: Request) {
       newStatus = "EXPIRED";
     }
 
-    // 4. Update order
-    if (newStatus) {
+    // 4. Update order + deduct stock (in transaction if PAID)
+    if (newStatus === "PAID") {
+      await db.transaction(async (tx) => {
+        // Update order status
+        const result = await tx
+          .update(orders)
+          .set({
+            status: "PAID",
+            ...(xenditInvoiceId
+              ? { xenditInvoiceId: String(xenditInvoiceId) }
+              : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(orders.id, externalId))
+          .returning({ id: orders.id, status: orders.status });
+
+        if (result.length === 0) {
+          console.warn(`[Xendit Webhook] Order ${externalId} not found in DB`);
+          return;
+        }
+
+        // Fetch order items
+        const items = await tx
+          .select({
+            id: orderItems.id,
+            productId: orderItems.productId,
+            productSizeId: orderItems.productSizeId,
+            quantity: orderItems.quantity,
+          })
+          .from(orderItems)
+          .where(eq(orderItems.orderId, externalId));
+
+        // Deduct stock + create inventory movements for each item with a size
+        for (const item of items) {
+          if (item.productSizeId) {
+            // Decrement stock
+            await tx
+              .update(productSizes)
+              .set({
+                stock: sql`${productSizes.stock} - ${item.quantity}`,
+              })
+              .where(eq(productSizes.id, item.productSizeId));
+
+            // Create inventory movement record
+            await tx.insert(inventoryMovements).values({
+              productId: item.productId,
+              productSizeId: item.productSizeId,
+              type: "out",
+              quantity: item.quantity,
+              reason: `Order ${externalId}`,
+            });
+          }
+        }
+
+        console.log(
+          `[Xendit Webhook] Order ${externalId} → PAID, stock deducted for ${items.length} item(s)`,
+        );
+      });
+    } else if (newStatus) {
+      // Non-PAID status updates (e.g. EXPIRED) — no stock changes
       const result = await db
         .update(orders)
         .set({
@@ -70,3 +128,4 @@ export async function POST(req: Request) {
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
+

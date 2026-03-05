@@ -45,11 +45,6 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Analytics",
-    url: "/admin/analytics",
-    icon: BarChart3,
-  },
-  {
     title: "Products",
     url: "/admin/products",
     icon: Package,
@@ -68,11 +63,6 @@ const menuItems = [
     title: "Orders",
     url: "/admin/orders",
     icon: ShoppingCart,
-  },
-  {
-    title: "Customers",
-    url: "/admin/customers",
-    icon: Users,
   },
   {
     title: "Settings",

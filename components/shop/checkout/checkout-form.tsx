@@ -20,6 +20,7 @@ import {
 import { CheckoutLocationForm } from "./checkout-location-form";
 import { useCheckoutStore } from "@/lib/stores/checkout-store";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useCartHydration } from "@/components/shop/cart/cart-hydration-wrapper";
 import type { CustomerInfo } from "@/lib/types/checkout";
 import { formatCurrency } from "@/lib/currency";
 
@@ -64,6 +65,7 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { shippingCost } = useCheckoutStore();
   const { getSummary } = useCartStore();
+  const isHydrated = useCartHydration();
   const summary = getSummary();
   const total = summary.subtotal + (shippingCost ?? 0);
 
@@ -253,7 +255,9 @@ export function CheckoutForm({ provinces }: CheckoutFormProps) {
         >
           {isSubmitting
             ? "Processing..."
-            : `Place Order - ${formatCurrency(total)}`}
+            : isHydrated
+              ? `Place Order - ${formatCurrency(total)}`
+              : "Place Order"}
         </Button>
       </FieldGroup>
     </form>

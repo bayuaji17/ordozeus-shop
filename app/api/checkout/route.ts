@@ -59,17 +59,42 @@ export async function POST(req: Request) {
 
     // Optional: Fetch size info if applicable 
     const sizeIds = payload.items.map(i => i.sizeId).filter(Boolean) as string[];
-    const sizeMap = new Map<string, { sku: string | null; id: string }>();
+    const sizeMap = new Map<string, { sku: string | null; id: string; stock: number }>();
     if (sizeIds.length > 0) {
       const dbSizes = await db
         .select({
           id: productSizes.id,
           sizeId: productSizes.sizeId,
           sku: productSizes.sku,
+          stock: productSizes.stock,
         })
         .from(productSizes)
         .where(inArray(productSizes.sizeId, sizeIds));
-      dbSizes.forEach((s) => sizeMap.set(s.sizeId, { sku: s.sku, id: s.id }));
+      dbSizes.forEach((s) => sizeMap.set(s.sizeId, { sku: s.sku, id: s.id, stock: s.stock }));
+    }
+
+    // Validate stock availability
+    for (const item of payload.items) {
+      if (item.sizeId) {
+        const sizeInfo = sizeMap.get(item.sizeId);
+        if (!sizeInfo) {
+          const product = productsMap.get(item.productId);
+          return NextResponse.json(
+            { message: `Size not found for ${product?.name || item.productId}` },
+            { status: 400 }
+          );
+        }
+        if (sizeInfo.stock < item.quantity) {
+          const product = productsMap.get(item.productId);
+          const sizeName = item.sizeName || "selected size";
+          return NextResponse.json(
+            {
+              message: `Insufficient stock for ${product?.name || item.productId} (${sizeName}). Available: ${sizeInfo.stock}, Requested: ${item.quantity}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Build Order Items

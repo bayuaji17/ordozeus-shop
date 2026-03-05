@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { products, productSizes, sizes, categories } from "@/lib/db/schema";
+import { products, productSizes, sizes, categories, orders } from "@/lib/db/schema";
 import { sql, eq, lt } from "drizzle-orm";
 
 export async function getDashboardStats() {
@@ -88,19 +88,50 @@ export async function getDashboardStats() {
   }
 }
 
-export async function getProductStatusDistribution() {
+export async function getOrderChartData() {
   try {
-    const distribution = await db
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+
+    const paidStatuses = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED"];
+
+    const rawData = await db
       .select({
-        status: products.status,
+        date: sql<string>`to_char(${orders.createdAt}, 'YYYY-MM-DD')`,
+        revenue: sql<number>`cast(coalesce(sum(${orders.totalAmount}), 0) as integer)`,
         count: sql<number>`cast(count(*) as integer)`,
       })
-      .from(products)
-      .groupBy(products.status);
+      .from(orders)
+      .where(
+        sql`${orders.createdAt} >= ${thirtyDaysAgoStr} AND ${orders.status} IN (${sql.join(
+          paidStatuses.map((s) => sql`${s}`),
+          sql`, `,
+        )})`,
+      )
+      .groupBy(sql`to_char(${orders.createdAt}, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(${orders.createdAt}, 'YYYY-MM-DD')`);
 
-    return distribution;
+    // Fill in all 30 days (including zeros)
+    const dataMap = new Map(rawData.map((d) => [d.date, d]));
+    const result: { date: string; revenue: number; count: number }[] = [];
+
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const existing = dataMap.get(dateStr);
+      result.push({
+        date: dateStr,
+        revenue: existing?.revenue ?? 0,
+        count: existing?.count ?? 0,
+      });
+    }
+
+    return result;
   } catch (error) {
-    console.error("Error fetching product status distribution:", error);
-    throw new Error("Failed to fetch product status distribution");
+    console.error("Error fetching order chart data:", error);
+    return [];
   }
 }
+

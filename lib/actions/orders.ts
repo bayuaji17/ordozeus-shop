@@ -115,16 +115,16 @@ export async function getOrderById(orderId: string) {
   return order;
 }
 
+// Allowed transitions: PAID→PROCESSING, SHIPPED→DELIVERED, DELIVERED→COMPLETED
+const ALLOWED_TRANSITIONS: Record<string, string> = {
+  PAID: "PROCESSING",
+  SHIPPED: "DELIVERED",
+  DELIVERED: "COMPLETED",
+};
+
 export async function updateOrderStatus(
   orderId: string,
-  newStatus:
-    | "PENDING"
-    | "EXPIRED"
-    | "PAID"
-    | "PROCESSING"
-    | "SHIPPED"
-    | "DELIVERED"
-    | "COMPLETED",
+  newStatus: "PROCESSING" | "DELIVERED" | "COMPLETED",
 ) {
   await requireAdmin();
 
@@ -136,24 +136,72 @@ export async function updateOrderStatus(
     return { success: false, message: "Order not found" };
   }
 
-  // ONLY allow updates if the current status is PAID, PROCESSING, SHIPPED, or DELIVERED.
-  // Based on the user instruction "for upate order will enable if status payment is paid".
-  // This usually means once they hit PAID, the system lets admins move it forward.
-  const allowUpdate = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"].includes(
-    order.status,
-  );
-
-  if (!allowUpdate) {
+  const expectedNext = ALLOWED_TRANSITIONS[order.status];
+  if (!expectedNext || expectedNext !== newStatus) {
     return {
       success: false,
-      message:
-        "Order status can only be updated if payment is PAID or further along.",
+      message: `Cannot transition from ${order.status} to ${newStatus}.`,
     };
   }
 
   await db
     .update(orders)
-    .set({ status: newStatus })
+    .set({ status: newStatus, updatedAt: new Date() })
+    .where(eq(orders.id, orderId));
+
+  return { success: true };
+}
+
+/**
+ * Ship an order: sets tracking number + courier and transitions PROCESSING → SHIPPED.
+ */
+export async function shipOrder(
+  orderId: string,
+  trackingNumber: string,
+  courierId: string,
+) {
+  await requireAdmin();
+
+  if (!trackingNumber.trim()) {
+    return { success: false, message: "Tracking number is required." };
+  }
+  if (!courierId.trim()) {
+    return { success: false, message: "Courier is required." };
+  }
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+  });
+
+  if (!order) {
+    return { success: false, message: "Order not found" };
+  }
+
+  if (order.status !== "PROCESSING") {
+    return {
+      success: false,
+      message: `Cannot ship order. Current status is ${order.status}, expected PROCESSING.`,
+    };
+  }
+
+  // Look up courier name
+  const { couriers } = await import("@/lib/db/schema");
+  const courier = await db.query.couriers.findFirst({
+    where: eq(couriers.id, courierId),
+  });
+
+  if (!courier) {
+    return { success: false, message: "Courier not found." };
+  }
+
+  await db
+    .update(orders)
+    .set({
+      status: "SHIPPED",
+      trackingNumber: trackingNumber.trim(),
+      courier: courier.name,
+      updatedAt: new Date(),
+    })
     .where(eq(orders.id, orderId));
 
   return { success: true };

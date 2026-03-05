@@ -1,4 +1,4 @@
-import { Header } from "@/components/public/header";
+import { HeaderWrapper } from "@/components/public/header-wrapper";
 import { Footer } from "@/components/public/footer";
 import { getRootCategoriesWithChildren } from "@/lib/actions/home";
 
@@ -18,7 +18,7 @@ export default async function HomeLayout({
 
   return (
     <>
-      <Header categories={navCategories} />
+      <HeaderWrapper categories={navCategories} />
       {children}
       <Footer />
     </>

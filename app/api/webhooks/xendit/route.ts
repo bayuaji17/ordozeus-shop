@@ -4,36 +4,31 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { verifyXenditWebhookToken } from "@/lib/actions/xendit";
 
-/**
- * Xendit Invoice Webhook Handler
- *
- * Xendit sends a POST request when an invoice status changes.
- * The callback body contains the invoice details including
- * `external_id` (our orderId) and `status`.
- *
- * Xendit Invoice statuses:
- * - PAID      → Customer paid successfully
- * - EXPIRED   → Invoice expired without payment
- *
- * Docs: https://docs.xendit.co/api-reference#invoice-callback
- */
+
 export async function POST(req: Request) {
   try {
     // 1. Verify webhook token
     const callbackToken = req.headers.get("x-callback-token");
     if (!verifyXenditWebhookToken(callbackToken)) {
-      console.warn("Xendit Webhook: Invalid callback token");
+      console.warn("[Xendit Webhook] Invalid callback token");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // 2. Parse body
     const data = (await req.json()) as Record<string, unknown>;
 
+    // Gracefully ignore non-invoice webhooks (e.g. payment.capture from Payment Request API)
+    if (data.event && typeof data.event === "string") {
+      console.log(`[Xendit Webhook] Ignored non-invoice event: ${data.event}`);
+      return NextResponse.json({ status: "OK" });
+    }
+
     const externalId = data.external_id as string | undefined;
     const xenditStatus = data.status as string | undefined;
     const xenditInvoiceId = data.id as string | undefined;
 
     if (!externalId) {
+      console.warn("[Xendit Webhook] Missing external_id");
       return new NextResponse("Missing external_id", { status: 400 });
     }
 
@@ -47,8 +42,8 @@ export async function POST(req: Request) {
     }
 
     // 4. Update order
-    if (newStatus && typeof externalId === "string") {
-      await db
+    if (newStatus) {
+      const result = await db
         .update(orders)
         .set({
           status: newStatus,
@@ -57,21 +52,21 @@ export async function POST(req: Request) {
             : {}),
           updatedAt: new Date(),
         })
-        .where(eq(orders.id, externalId));
+        .where(eq(orders.id, externalId))
+        .returning({ id: orders.id, status: orders.status });
 
-      console.log(
-        `Xendit Webhook: Order ${externalId} marked as ${newStatus}, invoice_id=${xenditInvoiceId}`
-      );
+      if (result.length > 0) {
+        console.log(`[Xendit Webhook] Order ${externalId} → ${newStatus}`);
+      } else {
+        console.warn(`[Xendit Webhook] Order ${externalId} not found in DB`);
+      }
     } else {
-      console.log(
-        `Xendit Webhook: Ignored status "${xenditStatus}" for order ${externalId}`
-      );
+      console.log(`[Xendit Webhook] Ignored status "${xenditStatus}" for ${externalId}`);
     }
 
-    // Must return 200 OK so Xendit stops retrying
     return NextResponse.json({ status: "OK" });
   } catch (err) {
-    console.error("Xendit Webhook Error:", err);
+    console.error("[Xendit Webhook] Error:", err);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
